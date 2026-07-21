@@ -1,0 +1,25 @@
+@import 'tailwindcss';
+
+/* Class-based dark mode: toggled by adding `.dark` on <html> (see useTheme). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  color-scheme: light dark;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Give deep-linked reference entries breathing room below the sticky header. */
+:target {
+  scroll-margin-top: 5rem;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+}
+
+.dark body {
+  @apply bg-slate-950 text-slate-100;
+}
