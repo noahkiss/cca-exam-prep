@@ -33,7 +33,9 @@ The goal is a **publicly shareable app deployed on Cloudflare as a Worker** (usi
 ## Content rules (critical — see `plan.md` for the full version)
 
 - Questions must be **scenario-based** ("here's a broken agentic system + 4 plausible fixes, pick the architect's choice"), not trivia.
-- Every question needs: the correct answer, a **hint**, an **explanation of why the right answer wins AND why each distractor fails**, and a **domain tag**.
+- **Every question carries, as schema fields:** correct answer, `hint`, `explanation` (why right wins + why each distractor fails), `domain`, `eliminationRule`, and a **`tip`** (the trick/gotcha/helpful-to-know for that question) that cross-links to the reference section. See the full schema in `plan.md` §8 — the tips/tricks are part of the schema, not optional.
+- Ship a dedicated **"Get a step ahead" reference section** on the site (separate from the quiz) covering the 5 exam-thinking principles, instant-elimination rules, and gotchas — see `plan.md` §3/§5/§6 + feature #5.
+- Model question/explanation format on the **open-source examples** listed in `plan.md` §7 (each annotated with how current it is); don't copy their text.
 - **Avoid the tell:** do NOT let the correct answer always be the longest option or always land in slot A/B (a documented flaw in AI-generated banks). Randomize option order at render time; write distractors of comparable length.
 - Distractors must be **plausible real engineering mistakes**, not absurd filler.
 - Grading is **deterministic** (fixed answer key), never LLM-judged.

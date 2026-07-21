@@ -144,23 +144,29 @@ An answer is almost certainly **wrong** if it:
 
 ---
 
-## 7. Source library (deep links + what each is good for)
+## 7. Source library (deep links + freshness + what each is good for)
+
+**Freshness verified 2026-07-21.** The cert launched 2026-03-12 and Anthropic updates docs frequently, so prefer resources marked "aligned to latest guide" and re-verify links before a build session. **For modeling our own question format**, the highest-signal live examples are the two open GitHub repos below (readable source + explanations) and the "aligned to latest 2026 guide" banks — study their scenario framing and explanation style, don't copy their text.
+
 
 **Official (authoritative — learn principles here):**
 - Certification page: https://anthropic-partners.skilljar.com/claude-certified-architect-foundations-certification (has the official **Exam Guide PDF** + official practice exam — study the guide first, save the official practice exam for last)
 - Anthropic Academy (Skilljar) courses: https://anthropic.skilljar.com/ — *Building with the Claude API*, *Intro to MCP* + *Advanced Topics*, *Claude Code in Action*, *Intro to Subagents / Agent Skills*
 - Anthropic docs: https://docs.anthropic.com/ · MCP spec: https://modelcontextprotocol.io · "Building Effective Agents" (agent-vs-workflow taxonomy) · Anthropic Cookbook: https://github.com/anthropics/anthropic-cookbook
 
-**GitHub study repos (deep-dived):**
-- **paullarionov/claude-certified-architect** — 13-chapter written guide in 15 languages + PDF/EPUB + **Anki deck** (`anki/`) + `practical_test_en.html` (60-Q). Actively maintained/community-corrected. *Primary reading + flashcards.* Caveat: issue #39 message-role error (see §6).
-- **Connectry-io/connectrylab-architect-cert-mcp** (`npm i -g connectry-architect-mcp`) — MCP server = adaptive tutor: 390 Q, SM-2 spaced repetition, 30 handouts, 6 TS reference projects, capstone, scored mocks, **deterministic grading / zero sycophancy**. *Best interactive drill.* Caveat: last updated 2026-03 (static, may drift).
-- **hong-chu/claude-certified-architect-foundations-llm-wiki** — Obsidian vault of takeaways + pitfalls; point an agent at it to be quizzed.
+**⭐ Best example questions to model our schema on (open source — read the source + explanations):**
+- **paullarionov/claude-certified-architect** — `practical_test_en.html` (60-Q scenario test) + 13-chapter guide (15 languages) + PDF/EPUB + **Anki deck** (`anki/`). **Actively maintained / community-corrected** (issues into July 2026). *Primary reading + flashcards + a clean example of question + explanation format.* Caveat: issue #39 message-role error (see §6).
+- **Connectry-io/connectrylab-architect-cert-mcp** (`npm i -g connectry-architect-mcp`) — MCP server adaptive tutor: **390 scenario Q**, SM-2 spaced repetition, 30 handouts, 6 TS reference projects, capstone, scored mocks, **deterministic grading / zero sycophancy**. *Best example of the interactive drill UX + per-question explanation depth to emulate.* **Freshness: last pushed 2026-03-19 (static since launch — treat content as a snapshot, may drift).**
+- **hong-chu/claude-certified-architect-foundations-llm-wiki** — Obsidian vault of takeaways + pitfalls; point an agent at it to be quizzed. Maintained around launch; verify currency.
 
-**Free mock exams (drill recall):**
-- `claude-certified-architect-mock-exam-cyberskill.vercel.app` — rated **hardest & most exam-accurate** by multiple passers.
-- `claudecertificationguide.com/mock-exam` — medium.
-- `certsafari.com` — medium, hundreds of questions.
-- Preporato.com (Architect/Developer/Associate sets) — vendor, multi-layer validated banks + flashcards + hands-on projects.
+**Free mock-exam banks (drill recall — "aligned to latest 2026 guide" = fresher):**
+- `claudearchitectcertification.com/practice` — **500+ Q**, all 5 domains, scored 0–1000 / 720, free, no account. *Strong, current.*
+- `certsafari.com/anthropic/claude-certified-architect` — **614 Q**, aligned to latest exam guide, detailed explanations. *Current.*
+- `certificationpractice.com/practice-exams/anthropic-claude-certified-architect-foundations` — 360 Q / 6 exams, aligned to latest 2026 guide. *Current.*
+- `claudecertificationguide.com/mock-exam` — 28-Q quick or full 60-Q/120-min simulation. *Current.*
+- `neerajkr7.github.io/cca-foundations-exam-practice` — **open GitHub Pages**, 100 scenario Q, works offline. *Another readable open-source format example.*
+- `claudecertification.com` — free mocks across Associate/Developer/Architect.
+- ~~`claude-certified-architect-mock-exam-cyberskill.vercel.app`~~ — **DEAD as of 2026-07-21** (was previously rated the hardest/most-accurate; removed).
 
 **Passer write-ups (the "how to think" gold):**
 - 843/1000 in 2 weeks — the 5 principles in §3: https://medium.com/@yeesun.chu/how-i-passed-the-claude-certified-architect-foundations-cca-f-exam-in-2-weeks-6b967e6effb4
@@ -177,11 +183,29 @@ Build a static client-side SPA (see `AGENTS.md` for stack + port). Core:
 2. **Study mode** — instant feedback + full explanation per question. A **Hint** button that surfaces the relevant §3 principle or §4 concept *without* revealing the answer (progressive: nudge → concept → near-give).
 3. **Explanations** — for every question, why the right answer wins AND why each distractor fails (the §4/§5 reasoning), plus which §5 elimination rule applies.
 4. **Domain mastery dashboard** — accuracy per domain vs the 720 bar, weighted per §2; flag weak domains; "you'd pass/fail" verdict that requires every domain above bar, not just the average.
-5. **Tips & Tricks reference** — browsable surface of §3 (5 principles), §5 (elimination rules), §6 (gotchas). This is a study tool in its own right.
+5. **"Get a step ahead" reference section** — a dedicated, browsable part of the site (not tied to any single question) that teaches the meta-game: §3 (the 5 exam-thinking principles), §5 (instant-elimination rules), §6 (gotchas incl. the message-role correction + the answer-length tell). This is the highest-value study surface — treat it as a first-class page, the thing that puts our users ahead of people who only grind question banks.
 6. **Redo-missed + spaced repetition** — re-drill only missed questions; bonus SM-2 scheduling like Connectry.
 7. **Progress persistence** — `localStorage`, no accounts/server/telemetry.
 
-**Question authoring (see `AGENTS.md` content rules):** scenario-based, deterministic key, randomized option order, comparable-length distractors that are *real* mistakes, domain-tagged, each with hint + explanation. Seed `data/questions.json` from the concepts in §4–§6; expand toward ~200 over time. Do NOT reproduce copyrighted official exam questions — write original scenarios that teach the same principles.
+**Per-question schema (required fields):**
+```jsonc
+{
+  "id": "arch-012",
+  "domain": "arch",            // arch | cc | pe | mcp | ctx
+  "scenario": "…broken system context…",
+  "question": "…",
+  "options": ["A…","B…","C…","D…"],
+  "answer": 2,                  // index; deterministic key
+  "hint": "progressive nudge toward the right §3 principle, no answer",
+  "explanation": "why the right answer wins AND why each distractor fails",
+  "eliminationRule": "which §5 instant-elimination rule applies",
+  "tip": "the trick / gotcha / helpful-to-know tied to THIS question (from §3/§4/§6) — every question carries one so users learn the meta while drilling",
+  "principle": "arch:constrain-dont-add"  // link back to a §3/§5/§6 entry for the reference section
+}
+```
+Every question MUST carry `hint`, `explanation`, `tip`, and `eliminationRule` — the tips/tricks/helpful-info are part of the schema, not an afterthought, and they cross-link to the "get a step ahead" reference section (feature #5).
+
+**Question authoring:** scenario-based, deterministic key, randomized option order at render, comparable-length distractors that are *real* engineering mistakes, domain-tagged. Model the format on the open-source examples in §7 (paullarionov `practical_test_en.html`, Connectry, neerajkr7). Seed `data/questions.json` from the concepts in §4–§6; expand toward ~200 over time. Do NOT reproduce copyrighted official/third-party questions — write original scenarios that teach the same principles.
 
 ---
 
