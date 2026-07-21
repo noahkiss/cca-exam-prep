@@ -3,7 +3,7 @@
 // of people who only grind question banks. Questions cross-link here via
 // `Question.principle` (matching a Principle or Gotcha id).
 
-import type { Principle, EliminationRule, Gotcha } from '../types';
+import type { Domain, Principle, EliminationRule, Gotcha, Resource } from '../types';
 
 /** §3 — the 5 exam-thinking principles (plus the two load-bearing meta-tells). */
 export const PRINCIPLES: Principle[] = [
@@ -24,6 +24,9 @@ Watch for: any option that solves a reliability/consistency problem by adding ca
 Hooks are 100% deterministic. Prompts are ~90% probabilistic. A PreToolUse hook can block/deny a tool call; a prompt can only make the right behavior more likely. For anything where a single violation is unacceptable, the enforcement point is code.
 
 Watch for: "instruct the model to always…", "add a strong instruction to the system prompt…", "tell it to be careful about…" as fixes for hard guarantees. Those are prompt-level fixes for problems that need a code-level gate.`,
+    resources: [
+      { label: 'Claude Code hooks', url: 'https://code.claude.com/docs/en/hooks' },
+    ],
   },
   {
     id: 'fix-earliest-layer',
@@ -46,6 +49,12 @@ Watch for: options that patch a late stage (retry, validator, classifier, human 
 - missing info in the source  → not fixable by retries (the info isn't there)
 
 The correct answer is the fix that targets the SPECIFIC failure described, not a generically powerful technique.`,
+    resources: [
+      {
+        label: 'Prompting best practices',
+        url: 'https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices',
+      },
+    ],
   },
   {
     id: 'escalate-on-policy-not-vibes',
@@ -119,6 +128,12 @@ export const GOTCHAS: Gotcha[] = [
 A tool result is a user-role message containing a tool_result content block. A popular study guide (paullarionov, issue #39 open) wrongly lists "tool" as a role — don't repeat that mistake on the exam.
 
 A system message can also appear inline in the messages array (for mid-conversation instructions without invalidating the cached top-level system prefix), with strict placement rules: it must follow a user/assistant turn, it CANNOT sit between a tool_use block and its tool_result (that returns a 400), and later system messages take precedence. Message structure is directly testable.`,
+    resources: [
+      {
+        label: 'Tool use overview',
+        url: 'https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview',
+      },
+    ],
   },
   {
     id: 'gotcha-answer-tell',
@@ -152,3 +167,65 @@ export const REFERENCE_BY_ID: Record<string, { kind: 'principle' | 'gotcha'; tit
     ...PRINCIPLES.map((p) => [p.id, { kind: 'principle' as const, title: p.title }]),
     ...GOTCHAS.map((g) => [g.id, { kind: 'gotcha' as const, title: g.title }]),
   ]);
+
+/**
+ * Per-domain "go read this next" links — authoritative Anthropic sources, mapped
+ * to what each domain actually tests. Surfaced by the dashboard's focus areas so
+ * a weak domain points straight at the primary docs to fix it. All URLs verified
+ * live; they are the current canonical locations (docs.claude.com redirects here).
+ */
+export const DOMAIN_RESOURCES: Record<Domain, Resource[]> = {
+  arch: [
+    {
+      label: 'Tool use overview (agents & tools)',
+      url: 'https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview',
+    },
+    { label: 'Claude Code subagents', url: 'https://code.claude.com/docs/en/sub-agents' },
+    {
+      label: 'Context windows',
+      url: 'https://platform.claude.com/docs/en/build-with-claude/context-windows',
+    },
+  ],
+  cc: [
+    { label: 'Claude Code overview', url: 'https://code.claude.com/docs/en/overview' },
+    { label: 'Hooks', url: 'https://code.claude.com/docs/en/hooks' },
+    { label: 'Settings & config scope', url: 'https://code.claude.com/docs/en/settings' },
+    { label: 'Headless CI (GitHub Actions)', url: 'https://code.claude.com/docs/en/github-actions' },
+  ],
+  pe: [
+    {
+      label: 'Prompt engineering overview',
+      url: 'https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/overview',
+    },
+    {
+      label: 'Prompting best practices',
+      url: 'https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices',
+    },
+    {
+      label: 'Extended thinking',
+      url: 'https://platform.claude.com/docs/en/build-with-claude/extended-thinking',
+    },
+  ],
+  mcp: [
+    { label: 'Model Context Protocol', url: 'https://modelcontextprotocol.io' },
+    { label: 'MCP specification', url: 'https://modelcontextprotocol.io/specification/2025-06-18' },
+    {
+      label: 'Tool use overview',
+      url: 'https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview',
+    },
+    {
+      label: 'MCP connector',
+      url: 'https://platform.claude.com/docs/en/agents-and-tools/mcp-connector',
+    },
+  ],
+  ctx: [
+    {
+      label: 'Context windows',
+      url: 'https://platform.claude.com/docs/en/build-with-claude/context-windows',
+    },
+    {
+      label: 'Prompt caching',
+      url: 'https://platform.claude.com/docs/en/build-with-claude/prompt-caching',
+    },
+  ],
+};

@@ -68,6 +68,7 @@ export function ExamPage() {
           domain: item.question.domain,
           correct: item.chosen === item.question.answer,
           usedHint: false,
+          mode: 'exam',
         });
       }
       return 'done';

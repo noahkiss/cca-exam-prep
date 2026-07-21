@@ -7,7 +7,9 @@ import {
   loadState,
   updateState,
   resetState,
+  ATTEMPT_LOG_CAP,
   type AppState,
+  type DrillMode,
   type ExamRecord,
   type QuestionStat,
 } from '@/lib/storage';
@@ -29,14 +31,15 @@ function getSnapshot(): AppState {
   return loadState();
 }
 
-/** Record the outcome of a single question drill (study / redo / srs modes). */
+/** Record the outcome of a single question drill (study / exam / review modes). */
 export function recordAnswer(params: {
   id: string;
   domain: Domain;
   correct: boolean;
   usedHint: boolean;
+  mode: DrillMode;
 }): void {
-  const { id, domain, correct, usedHint } = params;
+  const { id, domain, correct, usedHint, mode } = params;
   const now = Date.now();
   updateState((s) => {
     const prev: QuestionStat = s.questionStats[id] ?? {
@@ -68,6 +71,10 @@ export function recordAnswer(params: {
     // SM-2 update.
     const card: SrsCard = s.srs[id] ?? newCard(id, now);
     s.srs = { ...s.srs, [id]: review(card, qualityFor(correct, usedHint), now) };
+
+    // Append-only attempt log for trend/recency analysis, capped (oldest dropped).
+    const next = [...s.attempts, { id, ts: now, correct, usedHint, mode }];
+    s.attempts = next.length > ATTEMPT_LOG_CAP ? next.slice(-ATTEMPT_LOG_CAP) : next;
   });
   emit();
 }

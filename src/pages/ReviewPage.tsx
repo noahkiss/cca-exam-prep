@@ -48,6 +48,7 @@ export function ReviewPage() {
       domain: question.domain,
       correct: selected === question.answer,
       usedHint: false,
+      mode: 'review',
     });
   };
 

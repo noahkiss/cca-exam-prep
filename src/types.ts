@@ -119,11 +119,19 @@ export interface Question {
 
 /** ---- Reference ("Get a step ahead") content model ---- */
 
+/** An external link to an authoritative source (Anthropic docs, MCP spec, etc.). */
+export interface Resource {
+  label: string;
+  url: string;
+}
+
 export interface Principle {
   id: string;
   title: string;
   /** Markdown-ish body (plain text with newlines; no HTML). */
   body: string;
+  /** Optional authoritative sources to read for this principle. */
+  resources?: Resource[];
 }
 
 export interface EliminationRule {
@@ -138,4 +146,6 @@ export interface Gotcha {
   id: string;
   title: string;
   body: string;
+  /** Optional authoritative sources to read for this gotcha. */
+  resources?: Resource[];
 }

@@ -7,6 +7,28 @@ import type { SrsCard } from './srs';
 
 const STORAGE_KEY = 'cca-exam-prep:v1';
 
+/** Current on-disk schema version. Bump + add a migration when the shape changes. */
+export const STATE_VERSION = 2;
+
+/** Keep at most this many attempt-log entries (drop oldest). */
+export const ATTEMPT_LOG_CAP = 2000;
+
+/** Which mode a single question drill happened in. */
+export type DrillMode = 'study' | 'exam' | 'review';
+
+/**
+ * One appended-only record of a single question drill. We store only the
+ * question `id` (not domain/principle/scenarioSet) so the log survives bank
+ * edits — analysis re-joins against the live QUESTIONS_BY_ID at read time.
+ */
+export interface AttemptLog {
+  id: string;
+  ts: number;
+  correct: boolean;
+  usedHint: boolean;
+  mode: DrillMode;
+}
+
 /** Per-question aggregate history across all modes. */
 export interface QuestionStat {
   id: string;
@@ -30,24 +52,42 @@ export interface ExamRecord {
 }
 
 export interface AppState {
-  version: 1;
+  version: 2;
   questionStats: Record<string, QuestionStat>;
   /** Ids the user has missed at least once and not since retired. */
   missed: string[];
   srs: Record<string, SrsCard>;
   exams: ExamRecord[];
+  /** Append-only log of individual drills, capped at ATTEMPT_LOG_CAP (oldest dropped). */
+  attempts: AttemptLog[];
   theme: 'light' | 'dark' | 'system';
 }
 
 function defaultState(): AppState {
   return {
-    version: 1,
+    version: STATE_VERSION,
     questionStats: {},
     missed: [],
     srs: {},
     exams: [],
+    attempts: [],
     theme: 'system',
   };
+}
+
+/**
+ * Migrate an older persisted blob up to the current version. Forward-fills any
+ * missing fields with defaults, then applies each step. v1 had no attempt log,
+ * so migrating just seeds an empty one. Exported for unit testing.
+ */
+export function migrate(parsed: Omit<Partial<AppState>, 'version'> & { version?: number }): AppState {
+  const merged = { ...defaultState(), ...parsed } as AppState;
+  const from = typeof parsed.version === 'number' ? parsed.version : 1;
+  if (from < 2 && !Array.isArray(parsed.attempts)) {
+    merged.attempts = [];
+  }
+  merged.version = STATE_VERSION;
+  return merged;
 }
 
 let cache: AppState | null = null;
@@ -60,8 +100,8 @@ export function loadState(): AppState {
       cache = defaultState();
       return cache;
     }
-    const parsed = JSON.parse(raw) as Partial<AppState>;
-    cache = { ...defaultState(), ...parsed, version: 1 };
+    const parsed = JSON.parse(raw) as Omit<Partial<AppState>, 'version'> & { version?: number };
+    cache = migrate(parsed);
     return cache;
   } catch {
     cache = defaultState();

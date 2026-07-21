@@ -4,6 +4,7 @@ import { questionsByDomain } from '@/lib/questions';
 import { DOMAIN_STYLES } from '@/lib/domainStyles';
 import { ScoreBar } from '@/components/ScoreBar';
 import { DomainBadge } from '@/components/DomainBadge';
+import { FocusAreas } from '@/components/FocusAreas';
 import { useStore, clearAllProgress } from '@/hooks/useStore';
 
 export function DashboardPage() {
@@ -117,6 +118,8 @@ export function DashboardPage() {
           </div>
         ))}
       </div>
+
+      <FocusAreas state={state} />
 
       {state.exams.length > 0 && (
         <div>
