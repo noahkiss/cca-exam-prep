@@ -1,0 +1,17 @@
+# Cloudflare Worker config — assets-only (Workers Static Assets).
+# Serves the built Vite SPA in ./dist with client-side routing fallback.
+# No `main` script: an assets-only Worker needs no server code.
+#
+# FORKING? Change `name` and `account_id` to your own before deploying.
+#   - name        -> becomes <name>.<your-subdomain>.workers.dev
+#   - account_id  -> your Cloudflare account id (Workers & Pages > right sidebar)
+
+name = "cca-exam-prep"
+account_id = "27d1753d22af7236aa41e048092cb12a"
+compatibility_date = "2025-11-17"
+workers_dev = true
+
+[assets]
+directory = "./dist"
+# Fall back to index.html so client-side routes (React Router) resolve.
+not_found_handling = "single-page-application"
