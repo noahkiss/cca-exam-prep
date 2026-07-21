@@ -193,4 +193,4 @@ Build a static client-side SPA (see `AGENTS.md` for stack + port). Core:
 4. Exam mode (timer, sampling, scoring 0–1000, per-domain breakdown).
 5. Mastery dashboard + Tips/Tricks reference pages.
 6. Redo-missed / spaced repetition + localStorage persistence.
-7. Expand the bank; polish; deploy static.
+7. Expand the bank; polish; add `wrangler.toml` + README build/deploy steps; **deploy to Cloudflare as a Worker** (Workers Static Assets serving `dist/`, SPA fallback).

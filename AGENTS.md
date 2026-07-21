@@ -18,8 +18,17 @@ A static, client-side SPA (no backend needed) that a candidate uses to drill for
 ## Tech (recommended, not mandatory)
 
 - **Vite + React + TypeScript + Tailwind**, built as a static site. Questions live in `data/*.json`, loaded at runtime — content stays separate from code so the bank is easy to extend.
-- Fully client-side; deployable to any static host (GitHub Pages / Netlify / etc.).
-- **Pin the dev server to port `5837`** in `vite.config.ts` (`server.port`) — do not use Vite's default 5173. See the global port convention.
+- Fully client-side, no backend.
+- **Pin the dev server to port `5837`** in `vite.config.ts` (`server.port`) — do not use Vite's default 5173.
+
+## Deployment — Cloudflare Worker
+
+The goal is a **publicly shareable app deployed on Cloudflare as a Worker** (using Workers Static Assets to serve the built SPA), and a **public repo** so collaborators can use both the app and the source.
+
+- Build the SPA (`vite build` → `dist/`) and serve it via a Worker with a `wrangler.toml` (`assets` binding pointing at `dist/`, SPA fallback to `index.html`).
+- Deploy with `wrangler deploy`; ship a `wrangler.toml` in the repo so anyone can `wrangler deploy` their own copy.
+- Keep it 100% static/client-side — no secrets, no server state, nothing environment-specific. Everything runs in the browser (`localStorage` for progress).
+- Document the build + deploy steps in the README so collaborators can fork, run locally, and deploy their own instance.
 
 ## Content rules (critical — see `plan.md` for the full version)
 
@@ -34,4 +43,4 @@ A static, client-side SPA (no backend needed) that a candidate uses to drill for
 - Owned repo: this `CLAUDE.md` is just `@AGENTS.md`; keep operational guidance here in `AGENTS.md`, keep the deep brief in `plan.md`.
 - Keep a `STATUS.local.md` (gitignored) with current build state + next steps.
 - Commit atomically; work on `main`.
-- No git remote configured yet — add one when ready to publish.
+- Intended to be a **public repo shared with collaborators** — keep it generic and self-contained; no secrets, no private/internal references.
