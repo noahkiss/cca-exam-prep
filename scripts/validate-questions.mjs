@@ -91,6 +91,7 @@ const domainCounts = Object.fromEntries(DOMAINS.map((d) => [d, 0]));
 const answerCounts = [0, 0, 0, 0];
 const sourceCounts = {};
 let longestCorrect = 0;
+let shortestCorrect = 0;
 
 for (let i = 0; i < questions.length; i++) {
   const q = questions[i];
@@ -166,11 +167,11 @@ for (let i = 0; i < questions.length; i++) {
     warn(`${label}: hint appears to contain the correct option verbatim.`);
   }
 
-  // "correct answer is the longest option" tell
+  // Answer-length tell, measured in both directions (see the band check below).
   if (Array.isArray(q.options) && q.options.length === 4 && Number.isInteger(q.answer)) {
     const lens = q.options.map((o) => (typeof o === 'string' ? o.length : 0));
-    const max = Math.max(...lens);
-    if (lens[q.answer] === max) longestCorrect++;
+    if (lens[q.answer] === Math.max(...lens)) longestCorrect++;
+    if (lens[q.answer] === Math.min(...lens)) shortestCorrect++;
   }
 }
 
@@ -187,10 +188,26 @@ answerCounts.forEach((c, idx) => {
   }
 });
 
+// Answer-length band. With 4 options the no-signal baseline is 25%. A real exam
+// carries a mild long-correct skew (correct answers tend to be the more qualified
+// ones), so we want that skew present but not exploitable — hence a band, not a
+// ceiling. Below the floor the bank teaches an inverse heuristic ("the short one
+// is right") that the real exam will not reward.
+const LENGTH_BAND = { floor: 20, ceiling: 40 };
 const longestPct = total ? (longestCorrect / total) * 100 : 0;
-if (longestPct > 40) {
+const shortestPct = total ? (shortestCorrect / total) * 100 : 0;
+if (longestPct > LENGTH_BAND.ceiling) {
   warn(
-    `Correct answer is the longest option in ${longestCorrect}/${total} (${longestPct.toFixed(0)}%) — exceeds 40% ("the tell").`,
+    `Correct answer is the longest option in ${longestCorrect}/${total} (${longestPct.toFixed(0)}%) — above the ${LENGTH_BAND.ceiling}% ceiling ("the tell").`,
+  );
+} else if (longestPct < LENGTH_BAND.floor) {
+  warn(
+    `Correct answer is the longest option in only ${longestCorrect}/${total} (${longestPct.toFixed(0)}%) — below the ${LENGTH_BAND.floor}% floor, which teaches an inverse "shortest is right" tell.`,
+  );
+}
+if (shortestPct > LENGTH_BAND.ceiling) {
+  warn(
+    `Correct answer is the shortest option in ${shortestCorrect}/${total} (${shortestPct.toFixed(0)}%) — above the ${LENGTH_BAND.ceiling}% ceiling (inverse tell).`,
   );
 }
 
@@ -209,8 +226,10 @@ function report() {
   for (const k of Object.keys(sourceCounts).sort()) console.log(`  ${k.padEnd(16)} ${sourceCounts[k]}`);
 
   console.log(
-    `\nCorrect answer is longest option: ${longestCorrect}/${total} (${longestPct.toFixed(0)}%)`,
+    `\nAnswer-length tell (target band ${LENGTH_BAND.floor}–${LENGTH_BAND.ceiling}%, no-signal baseline 25%):`,
   );
+  console.log(`  longest option correct:  ${longestCorrect}/${total} (${longestPct.toFixed(0)}%)`);
+  console.log(`  shortest option correct: ${shortestCorrect}/${total} (${shortestPct.toFixed(0)}%)`);
 
   // scenarioSet coverage (informational)
   const setCounts = Object.fromEntries(SCENARIO_SETS.map((s) => [s, 0]));
