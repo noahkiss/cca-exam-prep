@@ -2632,12 +2632,12 @@
     "options": [
       "Serialize the 200 validated transaction records as JSON and include them in the user message of the Task invocation.",
       "Pass only the user's original query to the subagent and let it re-fetch and re-validate the data on its own.",
-      "Instruct the subagent to call the same data-fetch tool that the coordinator used, so it retrieves the records independently.",
+      "Pass a condensed summary of the 200 records rather than the full set, so the subagent stays within its context budget.",
       "Store the records in a global variable and tell the subagent the variable name in its prompt."
     ],
     "answer": 0,
     "hint": "Ask what a freshly spawned subagent actually knows about work the coordinator already finished. Then ask which option gets that knowledge across a process boundary.",
-    "explanation": "Since subagents have isolated contexts and cannot access the coordinator's memory, the coordinator must serialize the already-validated records and include them explicitly in the Task invocation's user message. This avoids redundant I/O (re-fetching) and ensures the subagent operates on the same validated dataset the coordinator prepared. Why the other options fail — (B) Letting the subagent re-fetch and re-validate independently is inefficient, potentially inconsistent, and may exceed the subagent's tool permissions if it was not granted the data-fetch tool. (C) Having the subagent re-fetch the data duplicates network I/O, risks fetching a different version of the data, and discards the coordinator's validation work. (D) Global variables are not accessible across isolated subagent contexts. The subagent runs in a separate process or context and cannot read the coordinator's runtime variables.",
+    "explanation": "Since subagents have isolated contexts and cannot access the coordinator's memory, the coordinator must serialize the already-validated records and include them explicitly in the Task invocation's user message. This avoids redundant I/O (re-fetching) and ensures the subagent operates on the same validated dataset the coordinator prepared. Why the other options fail — (B) Letting the subagent re-fetch and re-validate independently is inefficient, potentially inconsistent, and may exceed the subagent's tool permissions if it was not granted the data-fetch tool. (C) A condensed summary does not pass the data at all — it discards the per-record fields the subagent needs to work on. Context budget is a real constraint, but the fix is batching records across invocations, not compressing away the validated detail. (D) Global variables are not accessible across isolated subagent contexts. The subagent runs in a separate process or context and cannot read the coordinator's runtime variables.",
     "eliminationRule": "Assumes a subagent can implicitly reach the coordinator's memory, variables, or prior work — or pays to redo work the coordinator has already completed.",
     "tip": "Subagents inherit nothing from the coordinator: no context, no variables, no validated results. Anything they need must be passed explicitly in the prompt, or written to a file they are told to read.",
     "principle": "match-fix-to-failure",
@@ -3041,26 +3041,6 @@
     "eliminationRule": "Assumes the API remembers something — a session id, a persona, one trailing message — when every request must carry the full context itself.",
     "tip": "The Messages API is stateless: resuming a session means re-sending the complete ordered messages array plus the system prompt. A session ID is a storage key on your side, not context on Anthropic's.",
     "principle": "gotcha-message-roles",
-    "source": "connectry-mit"
-  },
-  {
-    "id": "arch-335",
-    "domain": "arch",
-    "scenarioSet": "multi-agent-research",
-    "scenario": "A coordinator agent is given a large research task and must divide it into independent subtopics, each handled by a dedicated subagent. The coordinator plans to run all subagents at the same time.",
-    "question": "When subtasks are fully independent of each other, what execution strategy should the coordinator use to minimize total wall-clock time?",
-    "options": [
-      "Random execution order — the coordinator picks a random subagent to run next until all are done.",
-      "Sequential execution — run each subagent one at a time to avoid API rate limits.",
-      "Delegated execution — let each subagent decide when to start based on its own availability.",
-      "Parallel execution — invoke all subagents concurrently so their work overlaps."
-    ],
-    "answer": 3,
-    "hint": "If nothing blocks on anything else, total time should approach the duration of the single longest subtask rather than the sum of all of them. Which strategy gets you there?",
-    "explanation": "When subtasks have no dependencies on each other, parallel execution is the correct strategy. Running subagents concurrently means total wall-clock time approaches the duration of the longest subtask rather than the sum of all subtask durations. Why the other options fail — (A) Random ordering provides no deterministic benefit and does not exploit concurrency; it is not a recognized coordination strategy. (B) Sequential execution is appropriate only when tasks have ordering dependencies. Running independent tasks sequentially wastes time and is the wrong default for independent workloads. (C) Delegating scheduling authority to subagents violates the single-authority principle; the coordinator, not subagents, decides when work begins.",
-    "eliminationRule": "Serialises independent subtasks, or hands scheduling authority to the workers, when the coordinator should be dispatching them all at once.",
-    "tip": "Fully independent subtasks run concurrently and the coordinator owns the scheduling. Reserve sequential execution for genuine ordering dependencies — rate limits are handled with a concurrency cap and backoff, not by serialising the whole fan-out.",
-    "principle": "match-fix-to-failure",
     "source": "connectry-mit"
   },
   {
@@ -4021,26 +4001,6 @@
     "eliminationRule": "Lists operational or commercial metadata (auth, timeouts, price, version) as part of the model-facing contract; the model only ever sees what it needs to choose and invoke the tool.",
     "tip": "A tool definition has exactly three model-facing parts: `name`, `description`, `input_schema`. Auth, timeouts, and versioning are server-side concerns the model never sees — and the description is the model's primary selection signal, so write it like a mini-prompt.",
     "principle": "fix-earliest-layer",
-    "source": "neerajkr7-mit"
-  },
-  {
-    "id": "mcp-305",
-    "domain": "mcp",
-    "scenarioSet": "dev-productivity",
-    "scenario": "A new team lead is scoping an integration project and keeps encountering 'MCP server' — in the Claude tooling docs, in a `.mcp.json` checked into the repo, and in the Claude Code settings. Before picking a transport and writing a server, they need to be clear on what the acronym actually denotes.",
-    "question": "What does MCP stand for in the context of Claude's tooling ecosystem?",
-    "options": [
-      "Model Context Protocol",
-      "Managed Compute Platform",
-      "Multi-Call Protocol",
-      "Message Correlation Pipeline"
-    ],
-    "answer": 0,
-    "hint": "Expand the acronym around what the protocol actually carries to the model, not around compute, queueing, or messaging infrastructure.",
-    "explanation": "MCP = Model Context Protocol. It is an open standard — created by Anthropic and now stewarded by the Linux Foundation's Agentic AI Foundation — for connecting AI models to external tools, data sources, and services in a standardised, secure way.",
-    "eliminationRule": "Expands the acronym into hosting, batching, or messaging jargon; MCP names the context it supplies to a model, not an infrastructure or transport product.",
-    "tip": "MCP is the Model Context Protocol: an open standard (created by Anthropic, now governed under the Linux Foundation's Agentic AI Foundation) that exposes tools, resources, and prompts to a model over stdio locally or streamable HTTP remotely.",
-    "principle": "gotcha-no-negative-marking",
     "source": "neerajkr7-mit"
   },
   {

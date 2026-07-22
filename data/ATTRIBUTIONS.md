@@ -5,8 +5,8 @@ The practice questions in [`questions.json`](./questions.json) come from three o
 | Origin | `source` tag | Count | License |
 |---|---|---|---|
 | Original (written for this project) | *(no `source` field)* | 36 | This repo's license |
-| Connectry Labs — ConnectryLab Architect Cert MCP | `connectry-mit` | 147 | MIT |
-| Neerajkr7 — CCA Foundations Exam Practice | `neerajkr7-mit` | 52 | MIT |
+| Connectry Labs — ConnectryLab Architect Cert MCP | `connectry-mit` | 146 | MIT |
+| Neerajkr7 — CCA Foundations Exam Practice | `neerajkr7-mit` | 51 | MIT |
 
 Every imported question carries a `source` field identifying its origin. Original
 questions have no `source` field.
