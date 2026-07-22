@@ -69,7 +69,7 @@ The exam gives you a **broken agentic system + 4 plausible fixes**; you pick the
 ### Domain 1 — Agentic Architecture & Orchestration (27%)
 - **Agent vs workflow:** fixed/known/ordered steps → deterministic **workflow** (prompt chaining). Open-ended path → **agent**. Don't over-architect a one-shot task.
 - **Patterns:** routing (classify→dispatch) · orchestrator-worker (workers return **summaries**, not raw context) · evaluator-optimizer (generate→critique→refine, needs clear criteria) · parallelization/sectioning.
-- **Subagents have isolated context** — they inherit NOTHING from the coordinator. All needed info must be passed explicitly in the prompt (or via files). "Analyze the findings" with no findings passed = the single most-tested trap.
+- **Subagents start fresh, but not empty.** They do *not* inherit the coordinator's **conversation history**, its system prompt, files it has already read, or its output style — so all task-specific information must be passed explicitly in the prompt (or via files). "Analyze the findings" with no findings passed = the single most-tested trap. They *do* inherit tool definitions and the `CLAUDE.md` hierarchy, so "a subagent has nothing at all" is itself a wrong answer — the isolation is of *context*, not of *configuration*.
 - **Completion signal:** `stop_reason == "end_turn"` is the ONLY reliable "done." Never parse assistant text or rely on iteration limits.
 - **Hub-and-spoke / coordinator** owns all inter-agent comms, routing, and error handling (observability).
 - **Hooks = 100% deterministic; prompts = ~90% probabilistic.** Financial/compliance/ordering → hooks, not prompts.
