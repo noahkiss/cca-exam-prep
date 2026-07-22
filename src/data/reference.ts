@@ -150,6 +150,13 @@ Position gets shuffled on the real exam (this app shuffles option order at rende
 Learn principles from the official Exam Guide + Anthropic docs. If a bank's "correct" answer conflicts with the five principles, trust the principles.`,
   },
   {
+    id: 'gotcha-item-format',
+    title: 'Read the item stem for how many answers to pick',
+    body: `Exam Guide v1.0 lists the item format as "multiple-choice and multiple-response items; each item states how many responses to select." Every sample item printed in that same guide is single-answer with four options, and every candidate write-up we could find describes single-answer throughout — so expect to pick one.
+
+The practical takeaway is not a new skill to drill, it is a habit: read the stem. If an item ever asks for two, it will say so on screen, and picking one will simply cost you the item. This app drills single-answer items only.`,
+  },
+  {
     id: 'gotcha-maximal-trap',
     title: 'The "guaranteed/maximal" trap',
     body: `The most aggressive or absolute option is usually wrong; correct answers feel balanced. Words like "always", "never", "completely", "guarantee", and "eliminate entirely" are distractor flavor more often than not.`,
