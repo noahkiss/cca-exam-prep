@@ -5,8 +5,8 @@ The practice questions in [`questions.json`](./questions.json) come from three o
 | Origin | `source` tag | Count | License |
 |---|---|---|---|
 | Original (written for this project) | *(no `source` field)* | 36 | This repo's license |
-| Connectry Labs — ConnectryLab Architect Cert MCP | `connectry-mit` | 60 | MIT |
-| Neerajkr7 — CCA Foundations Exam Practice | `neerajkr7-mit` | 25 | MIT |
+| Connectry Labs — ConnectryLab Architect Cert MCP | `connectry-mit` | 147 | MIT |
+| Neerajkr7 — CCA Foundations Exam Practice | `neerajkr7-mit` | 52 | MIT |
 
 Every imported question carries a `source` field identifying its origin. Original
 questions have no `source` field.
@@ -40,9 +40,14 @@ Imported items were transformed to fit this project's `Question` schema
 - **Scenario-set tagging** — each question was tagged with one of the six exam scenario
   sets for authentic 4-of-6 exam sampling.
 - **De-biasing** — option order was permuted to keep the correct-answer index balanced
-  across the bank, and over-long correct answers were de-emphasized so the correct option
-  is not systematically the longest (a known tell in AI-authored banks). Option order is
-  additionally shuffled at render time.
+  across the bank. Distractors were also rewritten to comparable length, because in the
+  imported material the correct option was the longest one in ~88% of items — a known tell
+  in AI-authored banks that survives shuffling. Across the bank the correct option is now
+  the longest in 17% of questions (random baseline 25%). Option order is additionally
+  shuffled at render time.
+- **Correctness review** — every imported question was checked against current Anthropic
+  documentation and this project's exam-thinking principles. Items with a wrong or
+  ambiguous answer key were re-keyed or dropped rather than shipped.
 
 ## MIT License
 
