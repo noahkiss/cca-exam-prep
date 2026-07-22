@@ -102,7 +102,6 @@ const REFERENCE_HOSTS = new Set([
   'code.claude.com',
   'modelcontextprotocol.io',
   'www.anthropic.com',
-  'anthropic.com',
 ]);
 
 for (let i = 0; i < questions.length; i++) {
