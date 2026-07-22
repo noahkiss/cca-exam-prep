@@ -188,6 +188,60 @@ answerCounts.forEach((c, idx) => {
   }
 });
 
+// Cloned guidance. hint/tip/eliminationRule are the per-question coaching the
+// study mode surfaces; when a batch import reuses one set across several
+// questions, the app teaches the same nudge repeatedly and the questions stop
+// being individually useful. Guidance must be authored per question.
+const guidanceKey = (q) =>
+  ['hint', 'tip', 'eliminationRule']
+    .map((f) => (typeof q[f] === 'string' ? q[f].toLowerCase().replace(/[^a-z ]/g, '').trim() : ''))
+    .join('|');
+const guidanceGroups = new Map();
+for (const q of questions) {
+  if (!q || typeof q !== 'object' || !q.id) continue;
+  const k = guidanceKey(q);
+  if (!k.replace(/\|/g, '')) continue;
+  if (!guidanceGroups.has(k)) guidanceGroups.set(k, []);
+  guidanceGroups.get(k).push(q.id);
+}
+const clonedGroups = [...guidanceGroups.values()].filter((ids) => ids.length > 1);
+const clonedCount = clonedGroups.reduce((n, ids) => n + ids.length, 0);
+if (clonedGroups.length) {
+  warn(
+    `${clonedCount} question(s) in ${clonedGroups.length} group(s) share identical hint/tip/eliminationRule text — guidance must be authored per question. Worst: ${clonedGroups
+      .slice()
+      .sort((a, b) => b.length - a.length)[0]
+      .join(', ')}`,
+  );
+}
+
+// Principle concentration. `principle` drives the tier-2 hint, the "Learn more"
+// link, and the targeted-drill filter, so a principle attached to a third of a
+// domain makes all three useless there — the hint stops nudging and the drill
+// stops being targeted. match-fix-to-failure is the usual offender: it is the
+// broadest of the five and becomes the default when the author is unsure.
+const PRINCIPLE_DOMAIN_CEILING = 35;
+const principleByDomain = {};
+for (const q of questions) {
+  if (!q || typeof q.principle !== 'string' || !DOMAINS.includes(q.domain)) continue;
+  ((principleByDomain[q.domain] ??= {})[q.principle] ??= 0);
+  principleByDomain[q.domain][q.principle]++;
+}
+for (const d of DOMAINS) {
+  const counts = principleByDomain[d];
+  if (!counts) continue;
+  const n = domainCounts[d];
+  if (!n) continue;
+  for (const [p, c] of Object.entries(counts)) {
+    const pct = (c / n) * 100;
+    if (pct > PRINCIPLE_DOMAIN_CEILING) {
+      warn(
+        `Domain "${d}": principle "${p}" on ${c}/${n} (${pct.toFixed(0)}%) — above the ${PRINCIPLE_DOMAIN_CEILING}% ceiling, diluting hints and targeted drills.`,
+      );
+    }
+  }
+}
+
 // Answer-length band. With 4 options the no-signal baseline is 25%. A real exam
 // carries a mild long-correct skew (correct answers tend to be the more qualified
 // ones), so we want that skew present but not exploitable — hence a band, not a
