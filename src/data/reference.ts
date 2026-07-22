@@ -207,8 +207,8 @@ export const DOMAIN_RESOURCES: Record<Domain, Resource[]> = {
     },
   ],
   mcp: [
-    { label: 'Model Context Protocol', url: 'https://modelcontextprotocol.io' },
-    { label: 'MCP specification', url: 'https://modelcontextprotocol.io/specification/2025-06-18' },
+    { label: 'Model Context Protocol', url: 'https://modelcontextprotocol.io/docs/getting-started/intro' },
+    { label: 'MCP specification', url: 'https://modelcontextprotocol.io/specification/2025-11-25' },
     {
       label: 'Tool use overview',
       url: 'https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview',

@@ -94,8 +94,10 @@ let longestCorrect = 0;
 let shortestCorrect = 0;
 
 /** Hosts a question `references` entry may point at — official docs only. */
+// Canonical documentation hosts. `docs.anthropic.com` is deliberately NOT here: it is a
+// three-hop redirect into platform.claude.com, so a citation using it returns 200 while
+// silently pointing somewhere else. Nothing in the bank uses it; keep it that way.
 const REFERENCE_HOSTS = new Set([
-  'docs.anthropic.com',
   'platform.claude.com',
   'code.claude.com',
   'modelcontextprotocol.io',

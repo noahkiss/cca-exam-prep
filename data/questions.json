@@ -540,14 +540,14 @@
     "options": [
       "Increase the context window so the full 42-field records and all 11 tools fit comfortably at once.",
       "Keep all 42 fields but add an instruction telling the model to read only the ones it actually needs for the task.",
-      "Trim the tool output to the few relevant fields (e.g. via a hook) and cap the agent at 4–5 role-relevant tools.",
+      "Trim the tool output to the few relevant fields (e.g. via a hook) and narrow the agent to a small, role-relevant tool set.",
       "Compress each record into a summary string that the agent parses whenever it needs a particular field."
     ],
     "answer": 2,
     "hint": "Two kinds of bloat here: fat tool output and too many tools. What's the direct fix for each?",
-    "explanation": "Returning 40+ fields when 5 matter wastes context — trim output to the relevant fields (a hook can do this) — and agents should be capped at ~4–5 role-relevant tools to keep selection sharp. (A) adds window to avoid trimming — 'constrain, don't add.' (B) telling the model to ignore fields still ships them into context. (D) a summary string is lossy and still carries unneeded data. Constrain the surface, don't expand capacity.",
+    "explanation": "Returning 40+ fields when 5 matter wastes context — trim output to the relevant fields (a hook can do this) — and an agent should carry only a small, role-relevant tool set to keep selection sharp. (A) adds window to avoid trimming — 'constrain, don't add.' (B) telling the model to ignore fields still ships them into context. (D) a summary string is lossy and still carries unneeded data. Constrain the surface, don't expand capacity.",
     "eliminationRule": "Adds context/window or asks the model to ignore data instead of trimming output and tool count.",
-    "tip": "Trim tool output to the fields that matter (via hooks); cap agents at 4–5 role-relevant tools. Constrain surface area rather than adding window.",
+    "tip": "Trim tool output to the fields that matter (via hooks); keep each agent to a small, role-relevant tool set. Constrain surface area rather than adding window.",
     "principle": "constrain-dont-add"
   },
   {
@@ -1579,7 +1579,7 @@
     "hint": "Consider both how many tools this agent truly needs and whether a tool call is optional or mandatory here.",
     "explanation": "Setting `tool_choice` to `{\"type\": \"any\"}` forces the model to call at least one tool from the provided list before responding. The model still selects which tool to use, but it cannot skip tool use entirely. This is the correct setting when you need guaranteed grounding in external data rather than parametric knowledge. Why the other options fail — (B) `auto` allows the model to decide whether to call a tool at all. If the model believes it can answer from training data it will bypass all tools, defeating the developer's requirement. (C) A forced tool name (`{\"type\": \"tool\", \"name\": \"search\"}`) guarantees that one specific tool is called, not merely that some tool is called. This is a stricter constraint than required and prevents the model from selecting the most appropriate tool. (D) Omitting `tool_choice` defaults to `auto` behavior, giving the model full discretion to skip tool use, which violates the stated requirement.",
     "eliminationRule": "Gives an agent too many tools, or the wrong tool_choice mode, for the requirement.",
-    "tip": "Cap agents at ~4–5 role-relevant tools; set tool_choice deliberately (auto/any/specific/none) to match whether a call is optional or required.",
+    "tip": "Keep each agent to a small, role-relevant tool set; set tool_choice deliberately (auto/any/specific/none) to match whether a call is optional or required.",
     "principle": "match-fix-to-failure",
     "source": "connectry-mit"
   },
@@ -1599,7 +1599,7 @@
     "hint": "Consider both how many tools this agent truly needs and whether a tool call is optional or mandatory here.",
     "explanation": "Comprehensive prompt injection mitigation requires layered controls: (1) context isolation prevents tainted data from the `RiskAnalysisAgent` reaching the `ExecutionAgent` directly; (2) a human-confirmation gate creates a hard architectural interrupt before any order is placed; (3) scoping the `ExecutionAgent`'s tool list to only execution tools—and denying it market data tools—eliminates the vector by which injected data could influence its decisions. This is defense in depth applied to tool distribution. Why the other options fail — (A) Input sanitization reduces risk but is not sufficient alone—sophisticated injections can evade sanitization. Using `auto` on the `ExecutionAgent` gives the model discretion but provides no hard guarantee against an injected instruction that successfully overrides that discretion. (C) Forcing `place_order` on every `ExecutionAgent` turn means every invocation places an order regardless of context, which is catastrophic in production. This setting is the opposite of what is needed for a safe execution path. (D) Giving the coordinator all tools maximizes the coordinator's privilege, creating a larger attack surface. An injected instruction that compromises the coordinator would now have access to all capabilities, including `place_order`.",
     "eliminationRule": "Gives an agent too many tools, or the wrong tool_choice mode, for the requirement.",
-    "tip": "Cap agents at ~4–5 role-relevant tools; set tool_choice deliberately (auto/any/specific/none) to match whether a call is optional or required.",
+    "tip": "Keep each agent to a small, role-relevant tool set; set tool_choice deliberately (auto/any/specific/none) to match whether a call is optional or required.",
     "principle": "match-fix-to-failure",
     "source": "connectry-mit"
   },
@@ -1619,7 +1619,7 @@
     "hint": "Consider both how many tools this agent truly needs and whether a tool call is optional or mandatory here.",
     "explanation": "The coordinator should use `auto` so it can decide intelligently which subagent to invoke based on context. Each subagent, however, should use a forced `tool_choice` for its own single capability tool so it always executes its specialized function rather than attempting to answer from parametric knowledge. This design matches coordinator-level reasoning with subagent-level reliability. Why the other options fail — (A) Setting the coordinator to `any` forces it to call at least one subagent but prevents it from ever responding directly, which breaks workflows where the coordinator needs to synthesize a final answer without additional delegation. Setting subagents to `auto` allows them to skip their tool, defeating the purpose of specialization. (B) Using `auto` for both coordinator and subagents allows subagents to decide not to use their tool. A web-search subagent that answers from memory rather than running a real search undermines the grounding guarantee the pipeline requires. (D) Forcing the coordinator to a single `delegate` tool prevents it from routing to the correct specialized subagent. A coordinator needs to choose between multiple delegation targets, which requires `auto` or at minimum `any`.",
     "eliminationRule": "Gives an agent too many tools, or the wrong tool_choice mode, for the requirement.",
-    "tip": "Cap agents at ~4–5 role-relevant tools; set tool_choice deliberately (auto/any/specific/none) to match whether a call is optional or required.",
+    "tip": "Keep each agent to a small, role-relevant tool set; set tool_choice deliberately (auto/any/specific/none) to match whether a call is optional or required.",
     "principle": "match-fix-to-failure",
     "source": "connectry-mit"
   },
@@ -1639,7 +1639,7 @@
     "hint": "Ask who needs this server and where it runs — that decides both scope and transport.",
     "explanation": "Claude Code uses a `.mcp.json` file at the project root for project-scoped MCP server configuration. This file is loaded only when Claude Code is launched from within that project directory, ensuring the servers defined there are not exposed in other projects. Why the other options fail — (A) ~/.claude/settings.json stores user-level Claude Code settings, not MCP server definitions. Placing MCP config here would not scope it to a single project. (B) ~/.claude/mcp-servers.json (or equivalent user-scope config under ~/.claude/) applies to all projects for the current user — the opposite of project-scoped behavior. (C) /etc/claude/ is not a recognized Claude Code configuration path and would not be loaded by Claude Code under any normal operating conditions.",
     "eliminationRule": "Puts MCP config at the wrong scope, or uses the wrong transport for the deployment.",
-    "tip": "Team MCP config → .mcp.json in VCS; personal → user config. Local same-machine → stdio; remote/shared → streamable HTTP.",
+    "tip": "Three MCP scopes: local (the default — this project, private), project (.mcp.json, committed = team standard), user (all projects, private). Local same-machine → stdio; remote/shared → streamable HTTP.",
     "principle": "match-fix-to-failure",
     "source": "connectry-mit"
   },
@@ -1659,7 +1659,7 @@
     "hint": "Ask who needs this server and where it runs — that decides both scope and transport.",
     "explanation": "Claude Code applies a precedence hierarchy where project-scoped configuration (.mcp.json) overrides user-scoped configuration (~/.claude/) for servers with the same name when the project is active. This allows project maintainers to pin specific server versions or endpoints without being overridden by a developer's personal defaults. Why the other options fail — (B) User-scoped configuration does not have higher precedence than project-scoped configuration. The precedence order is designed so that the most specific (project) scope wins over the more general (user) scope. (C) Claude Code does not halt on naming conflicts between scopes. It resolves them deterministically using its precedence rules rather than requiring manual intervention. (D) Claude Code does not expose namespaced identifiers for same-named servers from different scopes. The conflict is resolved by scope precedence, not by presenting both to the model simultaneously.",
     "eliminationRule": "Puts MCP config at the wrong scope, or uses the wrong transport for the deployment.",
-    "tip": "Team MCP config → .mcp.json in VCS; personal → user config. Local same-machine → stdio; remote/shared → streamable HTTP.",
+    "tip": "Three MCP scopes: local (the default — this project, private), project (.mcp.json, committed = team standard), user (all projects, private). Local same-machine → stdio; remote/shared → streamable HTTP.",
     "principle": "match-fix-to-failure",
     "source": "connectry-mit"
   },
@@ -2239,7 +2239,7 @@
     "hint": "Ask who needs this server and where it runs — that decides both scope and transport.",
     "explanation": "MCP architecture: host app = client that manages MCP server connections and proxies Claude's tool_use blocks to the appropriate server. Claude never directly contacts MCP servers — the host mediates.",
     "eliminationRule": "Puts MCP config at the wrong scope, or uses the wrong transport for the deployment.",
-    "tip": "Team MCP config → .mcp.json in VCS; personal → user config. Local same-machine → stdio; remote/shared → streamable HTTP.",
+    "tip": "Three MCP scopes: local (the default — this project, private), project (.mcp.json, committed = team standard), user (all projects, private). Local same-machine → stdio; remote/shared → streamable HTTP.",
     "principle": "match-fix-to-failure",
     "source": "neerajkr7-mit"
   },
@@ -4019,7 +4019,7 @@
     "hint": "The trouble is not how any single tool is worded — it is how many unrelated candidates the model has to weigh at once. What changes if each agent only ever sees a handful?",
     "explanation": "When a large heterogeneous tool list causes selection confusion, the architectural remedy is to decompose the single agent into specialized subagents. Each subagent receives only the tools relevant to its domain (e.g., the internal-knowledge subagent gets `knowledge_base_query`; the external-research subagent gets `web_search`). A coordinator routes requests to the appropriate subagent, eliminating the multi-tool ambiguity problem at its root. Why the other options fail — (A) Increasing temperature increases randomness in sampling. It does not improve the model's reasoning about which tool is most appropriate and would likely make selection less consistent, not more. (B) A retry loop addresses symptoms rather than the root cause. It also adds latency and cost, and if the model consistently misidentifies the right tool, retries will not reliably converge on the correct answer. (D) Longer tool names can marginally improve disambiguation but do not address the fundamental problem of a large tool list overwhelming the model's selection reasoning — and name length is not the same lever as a clear, scoped description.",
     "eliminationRule": "Patches selection errors downstream with retries, or nudges sampling and naming, instead of shrinking the candidate tool set the model must reason over.",
-    "tip": "Cap each agent at roughly 4–5 role-relevant tools. Sharpen tool descriptions first, but when one agent's list is large and heterogeneous the structural fix is decomposition into specialised subagents behind a coordinator — not retries or temperature.",
+    "tip": "Keep each agent to a small, role-relevant tool set. Sharpen tool descriptions first, but when one agent's list is large and heterogeneous the structural fix is decomposition into specialised subagents behind a coordinator — not retries or temperature.",
     "principle": "constrain-dont-add",
     "source": "connectry-mit"
   },
@@ -4059,7 +4059,7 @@
     "hint": "Count the candidates before you inspect any schema. What does a thirty-way choice across unrelated domains do to selection accuracy on a simple request?",
     "explanation": "Anthropic's documentation explicitly warns that providing too many tools degrades the model's ability to select the right one. When the tool list is large and diverse, Claude must reason over many candidates simultaneously, increasing the chance of a suboptimal or incorrect selection. The recommended pattern is to scope tool sets tightly per agent role. Why the other options fail — (A) Context window exhaustion would manifest as truncated conversations or errors, not as systematic wrong-tool selection on presumably simple requests. (C) Missing required parameters would cause schema validation errors or tool call failures, not the pattern of selecting the wrong tool or making unnecessary chains of calls. (D) A short system prompt can reduce context but is not the described failure mode. The symptom — wrong tool selection across many capabilities — points to tool proliferation, not prompt length.",
     "eliminationRule": "Blames context size, schema validity, or prompt length for a symptom whose signature — the wrong tool chosen across many unrelated capabilities — points squarely at the size of the tool list.",
-    "tip": "Tool proliferation degrades selection. Scope tool sets tightly per agent role — roughly 4–5 role-relevant tools — instead of handing one general-purpose agent every capability in the org.",
+    "tip": "Tool proliferation degrades selection. Scope tool sets tightly per agent role — consolidate related operations into fewer tools — instead of handing one general-purpose agent every capability in the org.",
     "principle": "constrain-dont-add",
     "source": "connectry-mit"
   },
