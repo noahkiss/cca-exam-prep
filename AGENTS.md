@@ -8,9 +8,9 @@ A practice/study web app for the **Claude Certified Architect – Foundations (C
 
 A static, client-side SPA (no backend needed) that a candidate uses to drill for the exam:
 
-- **Full practice exam** — 60 questions, 120-minute timer, scored 0–1000, pass at 720, scenario-based multiple-choice.
+- **Full practice exam** — 60 questions, 120-minute timer, scored 100–1000, pass at 720, scenario-based multiple-choice.
 - **Study mode** — instant feedback + explanation per question; a **hint** button that nudges toward the right reasoning *without* giving the answer.
-- **Per-domain mastery** — track accuracy against the 5 domains at their real weights (see `plan.md`); surface weak domains. Overall average is not enough — the app should show whether *each* domain is above the bar.
+- **Per-domain mastery** — track accuracy against the 5 domains at their real weights (see `plan.md`); surface weak domains. The real exam has **no per-domain cut score** (pass/fail is the total scaled score), so this is a **study diagnostic**, not a second gate — the app must show whether each domain is above the bar without claiming the exam requires it.
 - **Gotchas / tips / tricks surface** — a browsable reference of the traps and heuristics from `plan.md` (the 5 principles, the message-role correction, the "constrain don't add" rule, etc.).
 - **Spaced repetition / redo-missed** — let the user re-drill only missed questions; bonus: SM-2-style scheduling.
 - **Progress persistence** — `localStorage` (no accounts, no server, no telemetry).

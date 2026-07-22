@@ -38,7 +38,7 @@ describe('analyzeWeakSpots', () => {
     const archDomain = areas.find((a) => a.kind === 'domain' && a.key === 'arch');
     const ctxDomain = areas.find((a) => a.kind === 'domain' && a.key === 'ctx');
     expect(archDomain?.status).toBe('weak');
-    expect(archDomain?.scaled).toBe(167);
+    expect(archDomain?.scaled).toBe(250); // 1/6 on the 100–1000 scale
     expect(ctxDomain?.status).toBe('ok');
   });
 

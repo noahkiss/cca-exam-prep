@@ -12,7 +12,7 @@ import type { Domain } from '@/types';
 import { DOMAIN_BY_ID, SCENARIO_SETS } from '@/types';
 import { QUESTIONS_BY_ID } from '@/lib/questions';
 import { REFERENCE_BY_ID } from '@/data/reference';
-import { PASS_THRESHOLD, MAX_SCORE, toScaled } from '@/lib/scoring';
+import { PASS_THRESHOLD, MAX_SCORE, MIN_SCORE, toScaled } from '@/lib/scoring';
 
 export type WeakAreaKind = 'domain' | 'principle' | 'scenarioSet';
 export type WeakStatus = 'weak' | 'borderline' | 'ok';
@@ -27,7 +27,7 @@ export interface WeakArea {
   correct: number;
   /** Lifetime accuracy, 0–1. */
   accuracy: number;
-  /** Accuracy on the 0–1000 exam scale. */
+  /** Accuracy on the 100–1000 exam scale. */
   scaled: number;
   status: WeakStatus;
   lastSeen: number;
@@ -37,8 +37,8 @@ export interface WeakArea {
   delta: number;
 }
 
-/** The 0–1 mastery bar (720/1000). */
-export const MASTERY_BAR = PASS_THRESHOLD / MAX_SCORE;
+/** The 0–1 raw-accuracy equivalent of a 720 scaled score, on the 100–1000 scale. */
+export const MASTERY_BAR = (PASS_THRESHOLD - MIN_SCORE) / (MAX_SCORE - MIN_SCORE);
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_TREND_BUCKETS = 8;

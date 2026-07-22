@@ -1,27 +1,32 @@
 // Deterministic scoring against the fixed answer key. Never LLM-judged.
 //
-// Scaled score formula (mirrors the real exam's 0–1000 scale, pass 720):
-//   scaledScore = round( (correct / answered-or-total) * 1000 )
+// Scaled score formula (mirrors the real exam's 100–1000 scale, pass 720):
+//   scaledScore = 100 + round( (correct / answered-or-total) * 900 )
+// The real scale has a FLOOR of 100, not 0 — a zero-correct paper still reports
+// 100. So 720 corresponds to ~68.9% raw, not 72%.
 // For an exam attempt we divide by the number of questions PRESENTED (so an
-// unanswered question counts as wrong — matching "no negative marking, but a
-// blank still earns nothing"). Pass threshold is 720.
+// unanswered question counts as wrong — matching "a blank still earns nothing").
 //
-// Per-domain accuracy is a simple proportion within that domain; the pass
-// verdict requires EVERY represented domain to clear 720 as well, not just the
-// overall — an 85% average with one weak domain still fails.
+// Per-domain accuracy is a simple proportion within that domain. It is a STUDY
+// DIAGNOSTIC, not an exam rule: the real exam's pass/fail verdict is the total
+// scaled score alone, and section percentages do not gate it. A weak domain
+// still sinks you, but by arithmetic — it drags the total down.
 
 import type { Domain, Question } from '@/types';
 import { DOMAINS } from '@/types';
 
 export const PASS_THRESHOLD = 720;
 export const MAX_SCORE = 1000;
+/** Floor of the reported scale — 0% correct still reports 100, not 0. */
+export const MIN_SCORE = 100;
 
 export interface DomainResult {
   domain: Domain;
   total: number;
   correct: number;
-  /** 0–1000 scaled accuracy for this domain (or null if not represented). */
+  /** 100–1000 scaled accuracy for this domain (or null if not represented). */
   scaled: number | null;
+  /** Diagnostic only — the real exam does not gate on section scores. */
   passed: boolean;
 }
 
@@ -29,20 +34,24 @@ export interface ScoreResult {
   total: number;
   answered: number;
   correct: number;
-  /** Overall 0–1000 scaled score. */
+  /** Overall 100–1000 scaled score. */
   scaled: number;
+  /** THE verdict — the exam passes or fails on the total scaled score alone. */
   overallPassed: boolean;
-  /** True only if overall AND every represented domain clear the bar. */
+  /**
+   * Stricter study-mode view: overall AND every represented domain clear 720.
+   * NOT an exam rule — use it to decide what to drill, never to predict a result.
+   */
   passedStrict: boolean;
   domains: DomainResult[];
   /** Domains represented in this set that fell below the bar. */
   weakDomains: Domain[];
 }
 
-/** Scale a raw proportion (0–1) to the 0–1000 exam scale. */
+/** Scale a raw proportion (0–1) onto the 100–1000 exam scale. */
 export function toScaled(correct: number, total: number): number {
-  if (total <= 0) return 0;
-  return Math.round((correct / total) * MAX_SCORE);
+  if (total <= 0) return MIN_SCORE;
+  return MIN_SCORE + Math.round((correct / total) * (MAX_SCORE - MIN_SCORE));
 }
 
 export interface GradedItem {

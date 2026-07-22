@@ -179,8 +179,11 @@ function ExamIntro({ onStart, bankSize }: { onStart: () => void; bankSize: numbe
             auto-submits at zero.
           </li>
           <li>Drawn from 4 of the 6 scenario sets, like the real exam.</li>
-          <li>No feedback until you submit. Scored 0–1000, pass at 720.</li>
-          <li>Every domain must clear the bar — not just the overall average.</li>
+          <li>No feedback until you submit. Scored 100–1000, pass at 720.</li>
+          <li>
+            Pass/fail is your total score. You also get a per-domain breakdown — a study
+            diagnostic, since a weak domain pulls the total down.
+          </li>
         </ul>
       </div>
       <button

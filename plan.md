@@ -11,14 +11,16 @@ Everything needed to (a) understand the **Claude Certified Architect – Foundat
 | Full name | Claude Certified Architect – Foundations (CCA-F / CCAR-F) |
 | Format | 60 **scenario-based** multiple-choice questions |
 | Time | 120 minutes (~2 min/question) |
-| Scoring | Scaled **0–1000**, **pass = 720** |
-| Negative marking | **None** — answer every question, never leave blanks |
+| Scoring | Scaled **100–1000**, **pass = 720**. Pass/fail is the **total** — section scores are reported but do not gate it (Exam Guide v1.0 §10) |
+| Negative marking | **None** — answer every question, never leave blanks. ⚠️ Sourced only to the v0.1 draft; v1.0 dropped the sentence. A blank still earns nothing either way |
 | Delivery | Skilljar (Anthropic Academy) + Pearson VUE, online-proctored or test center |
-| Cost | Free for partner-company employees (first 5,000/partner), else $99–$125 |
+| Cost | **$125** |
 | Validity | 12 months |
-| Launched | 2026-03-12 |
+| Launched | 2026-03-12 ⚠️ UNVERIFIED — not stated in official material |
 
-**Structure quirk:** the exam draws **4 of 6 scenario sets** (~15 Q each):
+⚠️ Also **UNVERIFIED** (do not assert): "free for partner-company employees / first 5,000 per partner", and a "~30% concept / ~70% problem-solving" split.
+
+**Structure quirk:** the exam draws **4 of 6 scenario sets** (~15 Q each — our own 60÷4 arithmetic, not an official figure):
 1. Customer Support Resolution Agent
 2. Code Generation with Claude Code
 3. Multi-Agent Research System
@@ -28,7 +30,7 @@ Everything needed to (a) understand the **Claude Certified Architect – Foundat
 
 Mastering all six buys a buffer — you can afford to lose your weakest domain.
 
-**~30% of questions are concept-based; ~70% are real-world problem-solving** (per a passer). Study the concepts, but drill the judgment.
+**~30% concept-based / ~70% real-world problem-solving** — ⚠️ one passer's impression, not an official figure. The *direction* is right and matches the guide's scenario framing: study the concepts, but drill the judgment.
 
 ---
 
@@ -42,7 +44,7 @@ Mastering all six buys a buffer — you can afford to lose your weakest domain.
 | 4 | Tool Design & MCP Integration | 18% |
 | 5 | Context Management & Reliability | 15% |
 
-> Note: some guides fold **Reliability / Safety / Evaluation** into Domain 5, so expect eval/escalation/provenance questions there. Every domain must clear the bar independently — an 85% average with one weak domain can still fail.
+> Note: some guides fold **Reliability / Safety / Evaluation** into Domain 5, so expect eval/escalation/provenance questions there. On the real exam **no domain has its own cut score** — the verdict is the total scaled score alone (Exam Guide v1.0 §10). But the weights make a weak domain expensive: drop the 27% domain and you have surrendered a quarter of the paper, which a strong average elsewhere has to claw back. Treat per-domain mastery as a **study diagnostic**, never as a second gate.
 
 ---
 
@@ -147,7 +149,7 @@ An answer is almost certainly **wrong** if it:
 
 ## 7. Source library (deep links + freshness + what each is good for)
 
-**Freshness verified 2026-07-21.** The cert launched 2026-03-12 and Anthropic updates docs frequently, so prefer resources marked "aligned to latest guide" and re-verify links before a build session. **For modeling our own question format**, the highest-signal live examples are the two open GitHub repos below (readable source + explanations) and the "aligned to latest 2026 guide" banks — study their scenario framing and explanation style, don't copy their text.
+**Freshness verified 2026-07-21.** Anthropic updates docs frequently, so prefer resources marked "aligned to latest guide" and re-verify links before a build session. **For modeling our own question format**, the highest-signal live examples are the two open GitHub repos below (readable source + explanations) and the "aligned to latest 2026 guide" banks — study their scenario framing and explanation style, don't copy their text.
 
 
 **Official (authoritative — learn principles here):**
@@ -180,7 +182,7 @@ An answer is almost certainly **wrong** if it:
 
 Build a static client-side SPA (see `AGENTS.md` for stack + port). Core:
 
-1. **Exam mode** — 60 Q, 120-min countdown, no feedback until submit, scored 0–1000 (720 pass), 4-of-6 scenario sets sampled, per-domain result at the end.
+1. **Exam mode** — 60 Q, 120-min countdown, no feedback until submit, scored 100–1000 (720 pass), 4-of-6 scenario sets sampled, per-domain result at the end.
 2. **Study mode** — instant feedback + full explanation per question. A **Hint** button that surfaces the relevant §3 principle or §4 concept *without* revealing the answer (progressive: nudge → concept → near-give).
 3. **Explanations** — for every question, why the right answer wins AND why each distractor fails (the §4/§5 reasoning), plus which §5 elimination rule applies.
 4. **Domain mastery dashboard** — accuracy per domain vs the 720 bar, weighted per §2; flag weak domains; "you'd pass/fail" verdict that requires every domain above bar, not just the average.
@@ -215,7 +217,7 @@ Every question MUST carry `hint`, `explanation`, `tip`, and `eliminationRule` �
 1. Scaffold Vite+React+TS+Tailwind, pin port 5837, set up `data/questions.json` loader + types.
 2. Author ~30 seed questions across all 5 domains (5–7 each) using §4–§6; validate the answer key.
 3. Question runner (study mode: feedback + hint + explanation).
-4. Exam mode (timer, sampling, scoring 0–1000, per-domain breakdown).
+4. Exam mode (timer, sampling, scoring 100–1000, per-domain breakdown).
 5. Mastery dashboard + Tips/Tricks reference pages.
 6. Redo-missed / spaced repetition + localStorage persistence.
 7. Expand the bank; polish; add `wrangler.toml` + README build/deploy steps; **deploy to Cloudflare as a Worker** (Workers Static Assets serving `dist/`, SPA fallback).

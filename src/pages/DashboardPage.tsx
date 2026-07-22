@@ -10,7 +10,7 @@ import { useStore, clearAllProgress } from '@/hooks/useStore';
 export function DashboardPage() {
   const state = useStore();
 
-  // Per-domain mastery from lifetime question stats (scaled to the 0–1000 bar).
+  // Per-domain mastery from lifetime question stats (scaled to the 100–1000 bar).
   const rows = DOMAINS.map((meta) => {
     const stats = Object.values(state.questionStats).filter((s) => s.domain === meta.id);
     const attempts = stats.reduce((n, s) => n + s.attempts, 0);
@@ -65,15 +65,15 @@ export function DashboardPage() {
         <p className="text-sm text-slate-700 dark:text-slate-300">
           {verdict === 'pass' && (
             <>
-              <strong className="text-emerald-700 dark:text-emerald-300">On track to pass.</strong>{' '}
-              Every domain you have practiced is above the 720 bar. Keep them there.
+              <strong className="text-emerald-700 dark:text-emerald-300">Ready.</strong> Every
+              domain you have practiced is above the 720 bar. Keep them there.
             </>
           )}
           {verdict === 'fail' && (
             <>
-              <strong className="text-rose-700 dark:text-rose-300">Not passing yet.</strong> At
-              least one domain is below 720. Passing requires <em>every</em> domain above the bar,
-              not just a strong average.
+              <strong className="text-rose-700 dark:text-rose-300">Not ready yet.</strong> At least
+              one domain is below 720. The exam grades your total score, not each section — but
+              clearing the bar everywhere is the safest way to get that total up.
             </>
           )}
           {verdict === 'incomplete' && (
@@ -151,12 +151,12 @@ export function DashboardPage() {
                     <td className="px-4 py-2">
                       <span
                         className={
-                          e.passedStrict
+                          e.scaled >= PASS_THRESHOLD
                             ? 'text-emerald-600 dark:text-emerald-400'
                             : 'text-rose-600 dark:text-rose-400'
                         }
                       >
-                        {e.passedStrict ? 'Pass' : 'Fail'}
+                        {e.scaled >= PASS_THRESHOLD ? 'Pass' : 'Fail'}
                       </span>
                     </td>
                   </tr>

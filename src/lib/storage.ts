@@ -44,6 +44,11 @@ export interface ExamRecord {
   id: string;
   date: number;
   scaled: number;
+  /**
+   * Stricter study view (overall AND every domain clear 720). The displayed
+   * pass verdict is derived from `scaled`, since the real exam gates on the
+   * total alone.
+   */
   passedStrict: boolean;
   total: number;
   correct: number;

@@ -9,8 +9,8 @@ It runs entirely in your browser — no accounts, no server, no telemetry. All p
 ## Features
 
 - **Study mode** — answer scenario-based questions with instant feedback, a per-question hint that nudges your reasoning without giving away the answer, and a full explanation of why the right choice wins and each distractor fails.
-- **Full timed exam** — 60 questions, 120-minute timer, scored 0–1000 (pass at 720), just like the real thing.
-- **Per-domain mastery** — accuracy tracked against the five exam domains at their real weights, so you can see whether *each* domain clears the bar, not just your overall average.
+- **Full timed exam** — 60 questions, 120-minute timer, scored 100–1000 (pass at 720), just like the real thing.
+- **Per-domain mastery** — accuracy tracked against the five exam domains at their real weights. The real exam grades you on your total score, not section by section, so treat this as a study diagnostic: a weak domain is expensive because of its weight, not because it has its own cut score.
 - **"Get a step ahead" reference** — a browsable guide to the exam-thinking principles, instant-elimination rules, and common gotchas.
 - **Redo-missed + spaced repetition** — re-drill only the questions you missed, with SM-2-style scheduling.
 

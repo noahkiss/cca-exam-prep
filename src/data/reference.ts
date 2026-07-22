@@ -156,8 +156,8 @@ Learn principles from the official Exam Guide + Anthropic docs. If a bank's "cor
   },
   {
     id: 'gotcha-no-negative-marking',
-    title: 'No negative marking — never leave a blank',
-    body: `There is no penalty for wrong answers. Answer every question; guess if you must. Scaled 0–1000, pass at 720. Every domain should clear the bar — an 85% average with one weak domain can still fail.`,
+    title: 'Never leave a blank',
+    body: `A blank earns nothing, so always commit to an answer — an early draft of the Exam Guide stated outright that there is no penalty for wrong answers, though the published v1.0 does not repeat that sentence. Scaled 100–1000, pass at 720. Your result is the TOTAL scaled score: section percentages are reported but do not gate pass/fail. That is not licence to punt a domain — the heaviest domain is 27% of the paper, so a weak one drags the total down arithmetically.`,
   },
 ];
 

@@ -20,7 +20,9 @@ export function ExamResults({
   onRestart: () => void;
 }) {
   const [reviewing, setReviewing] = useState(false);
-  const pass = result.passedStrict;
+  // The real exam passes on the total scaled score alone — section scores are
+  // a study diagnostic, not a gate. Verdict tracks the total.
+  const pass = result.overallPassed;
 
   return (
     <div className="space-y-6">
@@ -45,11 +47,11 @@ export function ExamResults({
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
           {result.correct} of {result.total} correct · pass mark {PASS_THRESHOLD}
         </p>
-        {!pass && result.overallPassed && result.weakDomains.length > 0 && (
-          <p className="mx-auto mt-3 max-w-md text-sm text-rose-700 dark:text-rose-300">
-            Your overall score clears the bar, but{' '}
-            {result.weakDomains.map((d) => DOMAIN_BY_ID[d].short).join(', ')} fell below 720. Every
-            domain must pass independently.
+        {result.weakDomains.length > 0 && (
+          <p className="mx-auto mt-3 max-w-md text-sm text-amber-700 dark:text-amber-300">
+            {result.weakDomains.map((d) => DOMAIN_BY_ID[d].short).join(', ')} fell below 720. The
+            exam scores you on the total only — but a weak domain drags that total down, so this is
+            where the points are.
           </p>
         )}
       </div>

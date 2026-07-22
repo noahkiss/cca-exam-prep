@@ -1,6 +1,6 @@
-import { MAX_SCORE, PASS_THRESHOLD } from '@/lib/scoring';
+import { MAX_SCORE, MIN_SCORE, PASS_THRESHOLD } from '@/lib/scoring';
 
-/** Horizontal 0–1000 bar with a marker at the 720 pass line. */
+/** Horizontal 100–1000 bar with a marker at the 720 pass line. */
 export function ScoreBar({
   scaled,
   passed,
@@ -11,8 +11,11 @@ export function ScoreBar({
   /** Optional fill colour; defaults to pass/fail semantics. */
   colorClass?: string;
 }) {
-  const pct = Math.min(100, (scaled / MAX_SCORE) * 100);
-  const passPct = (PASS_THRESHOLD / MAX_SCORE) * 100;
+  // The scale starts at MIN_SCORE, so the track spans MIN_SCORE..MAX_SCORE —
+  // dividing by MAX_SCORE alone would draw a filled bar for a zero-correct paper.
+  const span = MAX_SCORE - MIN_SCORE;
+  const pct = Math.min(100, Math.max(0, ((scaled - MIN_SCORE) / span) * 100));
+  const passPct = ((PASS_THRESHOLD - MIN_SCORE) / span) * 100;
   const fill = colorClass ?? (passed ? 'bg-emerald-500' : 'bg-rose-500');
 
   return (

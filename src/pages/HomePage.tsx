@@ -87,8 +87,8 @@ export function HomePage() {
           The five domains
         </h2>
         <p className="mb-4 text-sm text-slate-600 dark:text-slate-400">
-          Weighted per the official blueprint. To pass you must clear the bar in{' '}
-          <em>every</em> domain — a strong average can still hide one weak spot.
+          Weighted per the official blueprint. The exam scores you on the total, but the weights
+          mean a weak domain costs you real points — a strong average can hide one.
         </p>
         <div className="space-y-3">
           {DOMAINS.map((d) => (

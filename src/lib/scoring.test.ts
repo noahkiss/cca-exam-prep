@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { gradeAttempt, toScaled, PASS_THRESHOLD, type GradedItem } from './scoring';
+import { gradeAttempt, toScaled, PASS_THRESHOLD, MIN_SCORE, type GradedItem } from './scoring';
 import { review, newCard, qualityFor } from './srs';
 import { seededPermutation } from './rng';
 import type { Question } from '@/types';
@@ -21,13 +21,18 @@ function q(id: string, domain: Question['domain'], answer = 0): Question {
 }
 
 describe('toScaled', () => {
-  it('maps proportion to 0-1000', () => {
-    expect(toScaled(0, 10)).toBe(0);
+  it('maps proportion onto the 100-1000 scale', () => {
+    // The scale has a floor of 100 — a zero-correct paper still reports 100.
+    expect(toScaled(0, 10)).toBe(MIN_SCORE);
     expect(toScaled(10, 10)).toBe(1000);
-    expect(toScaled(72, 100)).toBe(720);
+    expect(toScaled(5, 10)).toBe(550);
+  });
+  it('puts the 720 pass mark at ~68.9% raw, not 72%', () => {
+    expect(toScaled(69, 100)).toBeGreaterThanOrEqual(PASS_THRESHOLD);
+    expect(toScaled(68, 100)).toBeLessThan(PASS_THRESHOLD);
   });
   it('guards divide-by-zero', () => {
-    expect(toScaled(0, 0)).toBe(0);
+    expect(toScaled(0, 0)).toBe(MIN_SCORE);
   });
 });
 
@@ -41,9 +46,12 @@ describe('gradeAttempt strict pass', () => {
       { question: q('ctx-1', 'ctx'), chosen: 1 },
     ];
     const res = gradeAttempt(items);
-    expect(res.scaled).toBe(toScaled(5, 7)); // 714, below the 720 bar
+    expect(res.scaled).toBe(toScaled(5, 7)); // 743 — clears the bar on the total
     expect(res.passedStrict).toBe(false);
     expect(res.weakDomains).toContain('ctx');
+    // The real exam gates on the total ALONE, so the exam verdict still passes
+    // here. passedStrict is our stricter study view, not an exam rule.
+    expect(res.overallPassed).toBe(true);
   });
 
   it('passes only when every represented domain clears the bar', () => {
