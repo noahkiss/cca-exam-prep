@@ -93,6 +93,16 @@ const sourceCounts = {};
 let longestCorrect = 0;
 let shortestCorrect = 0;
 
+/** Hosts a question `references` entry may point at — official docs only. */
+const REFERENCE_HOSTS = new Set([
+  'docs.anthropic.com',
+  'platform.claude.com',
+  'code.claude.com',
+  'modelcontextprotocol.io',
+  'www.anthropic.com',
+  'anthropic.com',
+]);
+
 for (let i = 0; i < questions.length; i++) {
   const q = questions[i];
   const label = q && q.id ? `#${i} (${q.id})` : `#${i}`;
@@ -165,6 +175,33 @@ for (let i = 0; i < questions.length; i++) {
     q.hint.includes(q.options[q.answer])
   ) {
     warn(`${label}: hint appears to contain the correct option verbatim.`);
+  }
+
+  // references: optional, but when present must be page-level URLs on an allowed
+  // host. Liveness is not checked here (validation stays offline) — that gate
+  // lives in the merge step that adds them.
+  if (q.references !== undefined) {
+    if (!Array.isArray(q.references)) {
+      fail(`${label}: "references" must be an array of URL strings.`);
+    } else {
+      for (const url of q.references) {
+        if (typeof url !== 'string') {
+          fail(`${label}: reference entries must be strings.`);
+        } else if (url.includes('#')) {
+          fail(`${label}: reference "${url}" contains a #fragment — page-level URLs only.`);
+        } else {
+          let host = null;
+          try {
+            host = new URL(url).host;
+          } catch {
+            fail(`${label}: reference "${url}" is not a valid URL.`);
+          }
+          if (host && !REFERENCE_HOSTS.has(host)) {
+            fail(`${label}: reference host "${host}" is not an allowed documentation host.`);
+          }
+        }
+      }
+    }
   }
 
   // Answer-length tell, measured in both directions (see the band check below).

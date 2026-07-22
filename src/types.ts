@@ -115,6 +115,14 @@ export interface Question {
   tip: string;
   /** Id of the reference entry (principle/gotcha) this links to. See reference.ts. */
   principle: string;
+  /**
+   * Official doc pages backing this question's answer — "Learn more", not proof.
+   * Page-level URLs only: a #fragment still returns 200 after its anchor is gone,
+   * so it survives liveness checks while landing the reader on nothing. Optional
+   * and often absent — architectural-judgement questions frequently have no single
+   * page that backs them, and an omitted link beats a fabricated one.
+   */
+  references?: string[];
 }
 
 /** ---- Reference ("Get a step ahead") content model ---- */
