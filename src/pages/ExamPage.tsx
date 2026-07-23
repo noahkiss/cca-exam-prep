@@ -17,6 +17,10 @@ export function ExamPage() {
   const [deadline, setDeadline] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [current, setCurrent] = useState(0);
+  // Question ids the candidate opted to self-check. Purely a study aid — it
+  // reveals correctness on that card but never touches grading, which always
+  // runs off `answers` at submit.
+  const [checked, setChecked] = useState<Set<string>>(new Set());
 
   const questions = useMemo(
     () => (phase === 'idle' ? [] : sampleExam(QUESTIONS, attemptId)),
@@ -27,6 +31,7 @@ export function ExamPage() {
     const id = `exam:${Date.now().toString(36)}`;
     setAttemptId(id);
     setAnswers({});
+    setChecked(new Set());
     setCurrent(0);
     setDeadline(Date.now() + EXAM_MINUTES * 60 * 1000);
     setPhase('active');
@@ -87,6 +92,8 @@ export function ExamPage() {
 
   const question = questions[current];
   const answeredCount = Object.keys(answers).length;
+  const isAnswered = question.id in answers;
+  const isChecked = checked.has(question.id);
 
   return (
     <div className="space-y-6">
@@ -118,7 +125,7 @@ export function ExamPage() {
           onSelect={(canonical) =>
             setAnswers((a) => ({ ...a, [question.id]: canonical }))
           }
-          revealed={false}
+          revealed={isChecked}
         />
 
         <div className="mt-6 flex items-center justify-between gap-3">
@@ -129,6 +136,15 @@ export function ExamPage() {
             className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-40 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
           >
             ← Prev
+          </button>
+          <button
+            type="button"
+            onClick={() => setChecked((s) => new Set(s).add(question.id))}
+            disabled={!isAnswered || isChecked}
+            title="Reveal whether your pick is correct — does not affect your score"
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            {isChecked ? 'Checked ✓' : 'Check'}
           </button>
           {current < questions.length - 1 ? (
             <button
