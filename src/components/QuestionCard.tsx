@@ -11,6 +11,7 @@ import type { Question } from '@/types';
 import { seededPermutation } from '@/lib/rng';
 import { DomainBadge } from './DomainBadge';
 import { ScopeBadge } from './ScopeBadge';
+import { Markdown } from './Markdown';
 
 const SLOT_LABELS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
@@ -45,13 +46,15 @@ export function QuestionCard({
         <span className="text-xs text-slate-400 dark:text-slate-500">{question.id}</span>
       </div>
 
-      <p className="mb-4 rounded-lg border-l-4 border-slate-300 bg-slate-100 p-4 text-sm leading-relaxed text-slate-700 dark:border-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
-        {question.scenario}
-      </p>
+      <Markdown
+        source={question.scenario}
+        className="mb-4 rounded-lg border-l-4 border-slate-300 bg-slate-100 p-4 text-sm leading-relaxed text-slate-700 dark:border-slate-600 dark:bg-slate-800/60 dark:text-slate-300"
+      />
 
-      <p className="mb-4 text-base font-semibold text-slate-900 dark:text-slate-100">
-        {question.question}
-      </p>
+      <Markdown
+        source={question.question}
+        className="mb-4 text-base font-semibold text-slate-900 dark:text-slate-100"
+      />
 
       <ul className="space-y-2.5" role="radiogroup" aria-label="Answer options">
         {order.map((canonical, slot) => {
@@ -95,9 +98,10 @@ export function QuestionCard({
                 >
                   {SLOT_LABELS[slot]}
                 </span>
-                <span className="text-slate-800 dark:text-slate-200">
-                  {question.options[canonical]}
-                </span>
+                <Markdown
+                  source={question.options[canonical]}
+                  className="min-w-0 flex-1 text-slate-800 dark:text-slate-200"
+                />
                 {revealed && isCorrect && (
                   <span className="ml-auto shrink-0 text-emerald-600 dark:text-emerald-400" aria-label="correct">
                     ✓

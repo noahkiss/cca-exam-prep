@@ -1,4 +1,5 @@
 import { ReferenceLink } from './ReferenceLink';
+import { Markdown } from './Markdown';
 
 /**
  * Post-answer explanation panel: verdict, explanation, elimination rule, tip.
@@ -43,7 +44,10 @@ export function Feedback({
         {explanation && (
           <div>
             <h3 className="mb-1 font-semibold text-slate-900 dark:text-slate-100">Explanation</h3>
-            <p className="leading-relaxed text-slate-700 dark:text-slate-300">{explanation}</p>
+            <Markdown
+              source={explanation}
+              className="leading-relaxed text-slate-700 dark:text-slate-300"
+            />
           </div>
         )}
 
@@ -52,7 +56,7 @@ export function Feedback({
             <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Elimination rule
             </h3>
-            <p className="text-slate-700 dark:text-slate-300">{eliminationRule}</p>
+            <Markdown source={eliminationRule} className="text-slate-700 dark:text-slate-300" />
           </div>
         )}
 
@@ -61,7 +65,7 @@ export function Feedback({
             <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
               💡 Tip
             </h3>
-            <p className="text-slate-700 dark:text-slate-300">{tip}</p>
+            <Markdown source={tip} className="text-slate-700 dark:text-slate-300" />
           </div>
         )}
 
