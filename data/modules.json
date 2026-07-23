@@ -1018,5 +1018,878 @@
         "questionId": "arch-112"
       }
     ]
+  },
+  {
+    "id": "mcp-tool-descriptions",
+    "domain": "mcp",
+    "kind": "core",
+    "title": "Tool Descriptions & Selection",
+    "outcome": "Fix misrouting at the description rather than in front of it, choose the tool_choice mode a requirement actually needs, and reach for the right built-in tool.",
+    "objectives": [
+      "Explain why the description is the model's routing table",
+      "Decide what belongs in a tool description and what only costs tokens",
+      "Map a stated guarantee to the correct tool_choice mode",
+      "Choose among the built-in file and search tools",
+      "Sequence an incremental investigation instead of bulk-reading a module"
+    ],
+    "order": 1,
+    "estimatedMinutes": 18,
+    "principles": [
+      "elim-classifier-before-descriptions",
+      "match-fix-to-failure",
+      "constrain-dont-add"
+    ],
+    "scenarioSets": [
+      "dev-productivity",
+      "support-agent"
+    ],
+    "references": [
+      "https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview",
+      "https://modelcontextprotocol.io/specification/2025-11-25/server/tools"
+    ],
+    "steps": [
+      {
+        "id": "teach-description-is-routing",
+        "type": "teach",
+        "title": "The description is the routing table",
+        "principle": "elim-classifier-before-descriptions",
+        "body": "The model chooses a tool by reading its description. That is the whole mechanism. There is no registry it consults, no type system that disambiguates, and no memory of which tool worked last time.\n\nSo when two tools have descriptions that overlap, the model misroutes — and the symptom looks exactly like a model failure. It is an authoring failure. The cheap fix is nearly always in the text: differentiate the descriptions, rename the tools so their names do not read as synonyms, and add an explicit clause saying when to prefer one over the other.\n\nRead each description as if it were the only thing you knew about the tool, because for the model, it is.",
+        "callout": {
+          "kind": "warn",
+          "body": "Putting a routing classifier in front of a confused toolset, before rewriting the descriptions, is a documented instant-elimination. You have added a component, a failure mode and a latency hop to work around text you could have edited."
+        },
+        "tip": "When a question describes tool confusion, scan the options for the one that edits the descriptions. It is usually correct, and it is usually the least impressive-sounding option on the list."
+      },
+      {
+        "id": "classify-description-contents",
+        "type": "classify",
+        "title": "What belongs in a tool description?",
+        "principle": "constrain-dont-add",
+        "prompt": "You are writing the description for an MCP tool. Sort each candidate line by whether it helps the model choose and call the tool correctly.",
+        "buckets": [
+          {
+            "id": "include",
+            "label": "Include",
+            "blurb": "The model acts on it"
+          },
+          {
+            "id": "omit",
+            "label": "Omit",
+            "blurb": "Costs tokens in every request and changes nothing"
+          }
+        ],
+        "items": [
+          {
+            "id": "returns",
+            "text": "What the tool returns, field by field",
+            "bucket": "include",
+            "why": "Half of the selection decision is knowing what comes back."
+          },
+          {
+            "id": "input-formats",
+            "text": "Accepted input formats, with a concrete example value",
+            "bucket": "include",
+            "why": "Removes the guess. An example is worth several sentences of specification."
+          },
+          {
+            "id": "prefer-over",
+            "text": "When to prefer this tool over the similar one",
+            "bucket": "include",
+            "why": "The disambiguation clause — the single highest-value line when two tools overlap."
+          },
+          {
+            "id": "limits",
+            "text": "Known limits and edge cases, such as the maximum range or what an empty result means",
+            "bucket": "include",
+            "why": "Prevents misuse, and prevents an empty result being read as a failure."
+          },
+          {
+            "id": "does-not-do",
+            "text": "What the tool does not do",
+            "bucket": "include",
+            "why": "A boundary is as informative as a capability."
+          },
+          {
+            "id": "server-language",
+            "text": "The language the server is written in",
+            "bucket": "omit",
+            "why": "The model never acts on it."
+          },
+          {
+            "id": "internal-service",
+            "text": "Which internal service it proxies",
+            "bucket": "omit",
+            "why": "Implementation detail, paid for in every single request."
+          },
+          {
+            "id": "maintainer",
+            "text": "The maintainer and the changelog",
+            "bucket": "omit",
+            "why": "Metadata for humans, sitting in an artifact humans do not read."
+          },
+          {
+            "id": "retry-policy",
+            "text": "The server's retry and timeout policy",
+            "bucket": "omit",
+            "why": "The model does not choose it. Surface failures through structured errors instead."
+          },
+          {
+            "id": "accuracy-preamble",
+            "text": "A paragraph about how important accuracy is on this tool",
+            "bucket": "omit",
+            "why": "Exhortation in a routing artifact. It displaces the clauses that would actually have helped."
+          }
+        ],
+        "hint": "For each line, ask whether a different value for it would change which tool the model picks or what arguments it sends.",
+        "explanation": "A description earns its tokens by changing a decision: which tool, what arguments, how to read the result. Provenance, implementation and encouragement change none of those, and they are not free — the whole toolset's descriptions ship on every request.",
+        "tip": "Descriptions are context. A verbose toolset is a context-window problem before it is a documentation problem."
+      },
+      {
+        "id": "classify-tool-choice",
+        "type": "classify",
+        "title": "Which tool_choice mode?",
+        "principle": "prompts-suggest-systems-enforce",
+        "prompt": "Each turn below has a stated requirement. Pick the tool_choice mode that delivers it.",
+        "buckets": [
+          {
+            "id": "auto",
+            "label": "auto",
+            "blurb": "The model decides whether to call a tool"
+          },
+          {
+            "id": "any",
+            "label": "any",
+            "blurb": "A tool call is guaranteed; the model picks which"
+          },
+          {
+            "id": "specific",
+            "label": "a named tool",
+            "blurb": "This exact tool is called"
+          },
+          {
+            "id": "none",
+            "label": "none",
+            "blurb": "No tool is called this turn"
+          }
+        ],
+        "items": [
+          {
+            "id": "mixed-support",
+            "text": "A support agent that sometimes answers from knowledge and sometimes looks things up",
+            "bucket": "auto",
+            "why": "The mixed case is the default case."
+          },
+          {
+            "id": "never-prose",
+            "text": "An extraction job that must never return prose",
+            "bucket": "any",
+            "why": "Guarantees a tool call without dictating which one."
+          },
+          {
+            "id": "metadata-first",
+            "text": "A pipeline where metadata extraction must be the first action",
+            "bucket": "specific",
+            "why": "Forces the first step deterministically rather than requesting it."
+          },
+          {
+            "id": "several-extractors",
+            "text": "Several extraction tools, and any structured result is acceptable",
+            "bucket": "any",
+            "why": "The guarantee is on the shape of the output, not on which tool produced it."
+          },
+          {
+            "id": "summarisation-turn",
+            "text": "A summarisation turn where tool access would only be a distraction",
+            "bucket": "none",
+            "why": "Suppress the surface for the turn instead of hoping the model declines."
+          },
+          {
+            "id": "drafting-step",
+            "text": "A drafting step that must produce text, with tools still configured for later turns",
+            "bucket": "none",
+            "why": "Same, and it saves tearing down and rebuilding the tool configuration per turn."
+          },
+          {
+            "id": "validate-first",
+            "text": "Every response must call validate_record before anything else",
+            "bucket": "specific",
+            "why": "A named requirement needs the named mode."
+          },
+          {
+            "id": "general-assistant",
+            "text": "A general assistant with a small, well-described toolset",
+            "bucket": "auto",
+            "why": "Nothing here needs a guarantee, and forcing calls would make the assistant worse."
+          }
+        ],
+        "hint": "Two questions in order: is a tool call required this turn, and does it matter which tool?",
+        "explanation": "The four modes answer two independent questions. Is a call required? If no and tools are irrelevant this turn, none; if no but tools may help, auto. If yes, does the specific tool matter? If not, any; if so, name it.\n\nThe common error is reaching for a named tool when only the output shape was required — that removes the model's ability to route correctly and buys a guarantee you did not need.",
+        "tip": "tool_choice is an enforcement mechanism, not a hint. If a requirement says 'must' and the proposed answer is prompt wording, the mode was the real answer."
+      },
+      {
+        "id": "classify-builtin-tool",
+        "type": "classify",
+        "title": "Which built-in tool?",
+        "principle": "match-fix-to-failure",
+        "prompt": "Pick the tool that does each job most directly.",
+        "buckets": [
+          {
+            "id": "glob",
+            "label": "Glob",
+            "blurb": "Find files by name or path pattern"
+          },
+          {
+            "id": "grep",
+            "label": "Grep",
+            "blurb": "Find files by their contents"
+          },
+          {
+            "id": "read",
+            "label": "Read",
+            "blurb": "Load a file's contents"
+          },
+          {
+            "id": "write",
+            "label": "Write",
+            "blurb": "Create or wholesale replace a file"
+          },
+          {
+            "id": "edit",
+            "label": "Edit",
+            "blurb": "Replace a portion of an existing file"
+          },
+          {
+            "id": "bash",
+            "label": "Bash",
+            "blurb": "Run a command"
+          }
+        ],
+        "items": [
+          {
+            "id": "test-files",
+            "text": "Find every file matching **/*.test.tsx",
+            "bucket": "glob",
+            "why": "A name and path pattern."
+          },
+          {
+            "id": "find-definition",
+            "text": "Find where parseInvoice is defined",
+            "bucket": "grep",
+            "why": "Content search."
+          },
+          {
+            "id": "deprecated-imports",
+            "text": "Find every import of a deprecated module",
+            "bucket": "grep",
+            "why": "Content search across files."
+          },
+          {
+            "id": "list-by-extension",
+            "text": "List the components directory by extension",
+            "bucket": "glob",
+            "why": "Pattern over paths, not over contents."
+          },
+          {
+            "id": "load-config",
+            "text": "Load a config file in full in order to reason about it",
+            "bucket": "read",
+            "why": "You want the bytes, and you already know the path."
+          },
+          {
+            "id": "new-migration",
+            "text": "Create a new migration file that does not exist yet",
+            "bucket": "write",
+            "why": "Nothing to edit."
+          },
+          {
+            "id": "one-constant",
+            "text": "Change one constant inside an existing 900-line file",
+            "bucket": "edit",
+            "why": "A targeted replacement. Rewriting the file risks losing everything you did not re-emit."
+          },
+          {
+            "id": "run-tests",
+            "text": "Run the test suite",
+            "bucket": "bash",
+            "why": "An actual command."
+          },
+          {
+            "id": "commit",
+            "text": "Stage and commit changes",
+            "bucket": "bash",
+            "why": "An actual command."
+          },
+          {
+            "id": "wholesale-replace",
+            "text": "Replace a file's contents wholesale after computing the new version",
+            "bucket": "write",
+            "why": "The fallback path when a targeted edit is not applicable."
+          },
+          {
+            "id": "any-yaml",
+            "text": "Check whether a directory contains any YAML at all",
+            "bucket": "glob",
+            "why": "Existence by pattern."
+          },
+          {
+            "id": "error-string",
+            "text": "Find the file that produced a given error string",
+            "bucket": "grep",
+            "why": "Search by the message text."
+          }
+        ],
+        "hint": "Glob asks which files. Grep asks which files contain. Everything else is about what you do once you know.",
+        "explanation": "The recurring wrong answer is Bash. Shelling out to run find or grep works, but it discards the dedicated tool's structured output, its permissions story and its result limits — and it is the answer a question is usually testing you to reject. Between Write and Edit the rule is scope: replace part of a file with Edit, replace the whole thing with Write.",
+        "tip": "If an option runs a shell command to do something a first-class tool already does, treat it as a distractor until proven otherwise."
+      },
+      {
+        "id": "order-incremental-investigation",
+        "type": "order",
+        "title": "Sequence an incremental investigation",
+        "principle": "elim-critical-in-middle",
+        "prompt": "You need to understand an unfamiliar module before changing it. Order the steps.",
+        "items": [
+          {
+            "id": "grep-entry",
+            "label": "Search for the definition or export you are starting from"
+          },
+          {
+            "id": "read-entry",
+            "label": "Read the files that search found"
+          },
+          {
+            "id": "grep-usage",
+            "label": "Search for imports and call sites of what you just read"
+          },
+          {
+            "id": "read-consumers",
+            "label": "Read the consumers"
+          },
+          {
+            "id": "assess",
+            "label": "Decide whether the picture is complete, and repeat if not"
+          }
+        ],
+        "correctOrder": [
+          "grep-entry",
+          "read-entry",
+          "grep-usage",
+          "read-consumers",
+          "assess"
+        ],
+        "why": {
+          "grep-entry": "Start narrow. The first search is the only one whose terms you supply yourself.",
+          "read-entry": "Read only what the search returned — not the directory it lives in.",
+          "grep-usage": "The search terms for this step come out of the previous step's file. That dependency is what makes the pattern incremental rather than a fixed recipe.",
+          "read-consumers": "Now you are reading files chosen by evidence rather than by proximity.",
+          "assess": "Loop control. Either the picture is complete or you have new terms for another pass."
+        },
+        "hint": "Every search term after the first one comes from somewhere. Where?",
+        "explanation": "Each step's inputs are the previous step's outputs, so there is no valid alternate ordering. The tempting wrong approach is to read every file in the module first and search afterwards — which fills the context window with files that turn out to be irrelevant, and leaves the genuinely important ones buried in the middle of it. That is a context-economics failure wearing a tool-selection hat.",
+        "tip": "If the sweep is going to be large, this is exactly the work to delegate: spend a subagent's window on the search and have it return the map rather than the files."
+      },
+      {
+        "id": "teach-mcp-vs-builtin",
+        "type": "teach",
+        "title": "When an MCP tool loses to a built-in",
+        "principle": "elim-classifier-before-descriptions",
+        "body": "A predictable failure: you ship an MCP tool, and the model keeps using a built-in that does something superficially similar instead. Nothing is broken. The built-in's description sounds like it covers the job, and the MCP tool's does not say otherwise.\n\nThe fix is in the MCP tool's description, and it is specific: say what this tool reaches that the built-in cannot. The live system rather than the checkout. The authoritative record rather than a local copy. Data that is not on disk at all.\n\nThis is the same lesson as overlapping tool descriptions, with a harder edge — you are competing against a description you do not control, so yours has to carry the distinction on its own.",
+        "callout": {
+          "kind": "contrast",
+          "body": "Wrong instinct: remove the built-in so the model has no choice. Right instinct: state the boundary in the description. Stripping tools to force a route is the same over-correction as adding a classifier to fix one."
+        },
+        "tip": "Whenever an answer proposes removing capability to steer behaviour, check whether describing the boundary would have worked. Usually it would."
+      },
+      {
+        "id": "quiz-tool-confusion",
+        "type": "quiz",
+        "title": "Drill: why the model confuses two tools",
+        "questionId": "mcp-101"
+      },
+      {
+        "id": "quiz-description-fix",
+        "type": "quiz",
+        "title": "Drill: fixing selection at the description",
+        "questionId": "mcp-103"
+      },
+      {
+        "id": "quiz-tool-choice-modes",
+        "type": "quiz",
+        "title": "Drill: choosing tool_choice per stage",
+        "questionId": "mcp-109"
+      },
+      {
+        "id": "quiz-builtin-selection",
+        "type": "quiz",
+        "title": "Drill: picking the built-in",
+        "questionId": "mcp-320"
+      }
+    ]
+  },
+  {
+    "id": "mcp-surface-errors",
+    "domain": "mcp",
+    "kind": "core",
+    "title": "MCP Surface: Primitives, Errors & Scope",
+    "outcome": "Choose between a tool, a resource and a prompt, categorise a failure correctly enough to pick the right response, and put server configuration in the right file.",
+    "objectives": [
+      "Decide whether a capability should be a tool, a resource or a prompt",
+      "Sort failures into transient, validation, business, permission — and the empty result that is not a failure at all",
+      "Say which failures a retry can help and which it cannot",
+      "Sequence failure handling between a subagent and its coordinator",
+      "Place MCP server configuration in project scope, personal scope, or nowhere"
+    ],
+    "order": 2,
+    "estimatedMinutes": 20,
+    "prerequisites": [
+      "mcp-tool-descriptions"
+    ],
+    "principles": [
+      "elim-empty-as-error",
+      "match-fix-to-failure",
+      "fix-earliest-layer"
+    ],
+    "scenarioSets": [
+      "support-agent",
+      "dev-productivity"
+    ],
+    "references": [
+      "https://modelcontextprotocol.io/docs/learn/server-concepts",
+      "https://modelcontextprotocol.io/specification/2025-11-25/server/resources",
+      "https://code.claude.com/docs/en/mcp"
+    ],
+    "steps": [
+      {
+        "id": "classify-primitive",
+        "type": "classify",
+        "title": "Tool, resource, or prompt?",
+        "principle": "constrain-dont-add",
+        "prompt": "You are designing an MCP server. Decide how each capability should be exposed.",
+        "buckets": [
+          {
+            "id": "tool",
+            "label": "Tool",
+            "blurb": "The agent acts"
+          },
+          {
+            "id": "resource",
+            "label": "Resource",
+            "blurb": "The agent reads it for context"
+          },
+          {
+            "id": "prompt",
+            "label": "Prompt",
+            "blurb": "A reusable template that gets invoked"
+          }
+        ],
+        "items": [
+          {
+            "id": "create-issue",
+            "text": "Create an issue in the tracker",
+            "bucket": "tool",
+            "why": "A state-changing action."
+          },
+          {
+            "id": "issue-catalogue",
+            "text": "The catalogue of every open issue, for navigation",
+            "bucket": "resource",
+            "why": "Read-only orientation. It exists to remove exploratory calls."
+          },
+          {
+            "id": "db-schema",
+            "text": "The database schema",
+            "bucket": "resource",
+            "why": "Structure the agent reads in order to plan its queries."
+          },
+          {
+            "id": "run-migration",
+            "text": "Run a migration",
+            "bucket": "tool",
+            "why": "An action with consequences."
+          },
+          {
+            "id": "review-checklist",
+            "text": "The team's code-review checklist, as a fill-in template",
+            "bucket": "prompt",
+            "why": "A reusable prompt skeleton. Not data, and not an action."
+          },
+          {
+            "id": "fetch-customer",
+            "text": "Fetch one customer record by id",
+            "bucket": "tool",
+            "why": "A parameterised lookup the model drives by supplying the id."
+          },
+          {
+            "id": "api-reference",
+            "text": "The internal API reference documentation",
+            "bucket": "resource",
+            "why": "Reference material the agent reads, not a call it makes."
+          },
+          {
+            "id": "post-message",
+            "text": "Post a message to a channel",
+            "bucket": "tool",
+            "why": "An action."
+          },
+          {
+            "id": "incident-template",
+            "text": "A standard incident-report template the agent fills in",
+            "bucket": "prompt",
+            "why": "A named, reusable template, invoked rather than read."
+          },
+          {
+            "id": "doc-tree",
+            "text": "A hierarchical map of the project's document tree",
+            "bucket": "resource",
+            "why": "The map case exactly — one read replaces a walk."
+          }
+        ],
+        "hint": "The hard pair is 'fetch one record' against 'the catalogue of records'. What is different about who supplies the parameters?",
+        "explanation": "Actionable means tool; informational means resource. Fetching a record by id is a tool because the model supplies the parameter and drives the call. The catalogue is a resource because it is context the agent reads to know what exists in the first place. Prompts are the third thing: neither data nor action, but a reusable template that a human or an agent invokes by name.",
+        "tip": "If the agent has to find out what exists before it can act, that is a resource — and shipping one is usually cheaper than the exploratory tool calls it replaces."
+      },
+      {
+        "id": "classify-error-category",
+        "type": "classify",
+        "title": "Categorise the failure",
+        "principle": "elim-empty-as-error",
+        "prompt": "Each of these came back from a tool call. Sort them by what kind of outcome they actually are.",
+        "buckets": [
+          {
+            "id": "transient",
+            "label": "Transient",
+            "blurb": "Nothing is wrong with the request"
+          },
+          {
+            "id": "validation",
+            "label": "Validation",
+            "blurb": "The input was malformed"
+          },
+          {
+            "id": "business",
+            "label": "Business rule",
+            "blurb": "The system worked and said no"
+          },
+          {
+            "id": "permission",
+            "label": "Permission",
+            "blurb": "The caller is not allowed"
+          },
+          {
+            "id": "not-an-error",
+            "label": "Not an error",
+            "blurb": "A successful call with nothing in it"
+          }
+        ],
+        "items": [
+          {
+            "id": "timeout",
+            "text": "The orders API timed out",
+            "bucket": "transient",
+            "why": "Retry with backoff. Nothing about the request needs to change."
+          },
+          {
+            "id": "upstream-503",
+            "text": "A 503 from an upstream service",
+            "bucket": "transient",
+            "why": "The service is unavailable right now, not wrong."
+          },
+          {
+            "id": "connection-reset",
+            "text": "The connection was reset mid-request",
+            "bucket": "transient",
+            "why": "Infrastructure, not semantics."
+          },
+          {
+            "id": "missing-field",
+            "text": "A required field was missing from the call",
+            "bucket": "validation",
+            "why": "Retrying unchanged repeats the failure exactly. Fix the input first."
+          },
+          {
+            "id": "bad-date",
+            "text": "A date arrived in an unparseable format",
+            "bucket": "validation",
+            "why": "The call is malformed and will stay malformed."
+          },
+          {
+            "id": "bad-enum",
+            "text": "An enum value outside the accepted set was supplied",
+            "bucket": "validation",
+            "why": "Same shape — and a schema could have made it unrepresentable."
+          },
+          {
+            "id": "refund-cap",
+            "text": "The refund exceeds the policy cap",
+            "bucket": "business",
+            "why": "The system worked correctly and refused. Explain and offer an alternative; do not retry."
+          },
+          {
+            "id": "eligibility-window",
+            "text": "The account is outside the eligible window for this operation",
+            "bucket": "business",
+            "why": "A rule fired. Retrying is asking the same question again."
+          },
+          {
+            "id": "no-access",
+            "text": "The caller's credentials do not grant access to this record",
+            "bucket": "permission",
+            "why": "Not fixable by the agent. This is escalation material."
+          },
+          {
+            "id": "missing-scope",
+            "text": "The API key lacks the required scope",
+            "bucket": "permission",
+            "why": "A human has to change something outside the agent's reach."
+          },
+          {
+            "id": "zero-matches",
+            "text": "The search ran and matched zero records",
+            "bucket": "not-an-error",
+            "why": "A successful call with an empty result. Miscategorising this drives retry loops and false reports that the search is unavailable."
+          },
+          {
+            "id": "no-recent-orders",
+            "text": "The customer has no orders in the last 90 days",
+            "bucket": "not-an-error",
+            "why": "The same shape in business-flavoured wording — which is exactly why this is the one candidates get wrong."
+          }
+        ],
+        "hint": "One bucket is not a failure mode at all. Two items belong in it, and the second is dressed up to look like it belongs somewhere else.",
+        "explanation": "The category determines the response, which is why getting it wrong is expensive: transient wants a bounded retry, validation wants the input corrected first, business wants an explanation and an alternative, permission wants a human.\n\nThe fifth bucket is the one that earns its place. An empty result is a successful call. Treating it as an error produces retry loops against a query that will keep returning nothing, and tells the user the system is broken when it is working.",
+        "tip": "\"Treats an empty result as an error\" is an instant-elimination rule. If an option's error handling cannot distinguish 'found nothing' from 'could not look', it is wrong."
+      },
+      {
+        "id": "classify-retryable",
+        "type": "classify",
+        "title": "Will a retry help?",
+        "principle": "match-fix-to-failure",
+        "prompt": "Same outcomes, one question: does resending the identical call have any chance of a different result?",
+        "buckets": [
+          {
+            "id": "retry",
+            "label": "Retry as-is",
+            "blurb": "Backoff and send the same call again"
+          },
+          {
+            "id": "no-retry",
+            "label": "Do not retry as-is",
+            "blurb": "Something else has to change first, or nothing needs to happen"
+          }
+        ],
+        "items": [
+          {
+            "id": "timeout",
+            "text": "The orders API timed out",
+            "bucket": "retry",
+            "why": "The only class where the identical call can succeed on the next attempt."
+          },
+          {
+            "id": "upstream-503",
+            "text": "A 503 from an upstream service",
+            "bucket": "retry",
+            "why": "Bounded backoff. Unbounded retry turns a blip into an outage of your own making."
+          },
+          {
+            "id": "connection-reset",
+            "text": "The connection was reset mid-request",
+            "bucket": "retry",
+            "why": "Same call, different moment."
+          },
+          {
+            "id": "missing-field",
+            "text": "A required field was missing from the call",
+            "bucket": "no-retry",
+            "why": "The input has to be fixed. Retrying unchanged is a loop with a fixed outcome."
+          },
+          {
+            "id": "bad-enum",
+            "text": "An enum value outside the accepted set was supplied",
+            "bucket": "no-retry",
+            "why": "Correct the value, then call again. That is a new call, not a retry."
+          },
+          {
+            "id": "refund-cap",
+            "text": "The refund exceeds the policy cap",
+            "bucket": "no-retry",
+            "why": "The rule will fire again. A different action is needed, not another attempt."
+          },
+          {
+            "id": "no-access",
+            "text": "The caller's credentials do not grant access to this record",
+            "bucket": "no-retry",
+            "why": "Nothing the agent can do changes the answer."
+          },
+          {
+            "id": "zero-matches",
+            "text": "The search ran and matched zero records",
+            "bucket": "no-retry",
+            "why": "There is nothing to retry. The call succeeded."
+          },
+          {
+            "id": "no-recent-orders",
+            "text": "The customer has no orders in the last 90 days",
+            "bucket": "no-retry",
+            "why": "Retrying a successful empty query is the purest form of wasted latency."
+          }
+        ],
+        "hint": "Only one of the five categories from the previous step lands in the retry bucket.",
+        "explanation": "Retry is for transient failures and nothing else. Validation needs a corrected input, business needs a different action, permission needs a person, and an empty result needs nothing.\n\nWatch how the two empty-result rows behave here. Suppressing them silently is the first bug; someone notices, adds a retry, and turns it into a second one. Neither is handling — the fix is to report the empty result as a successful outcome with no matches.",
+        "tip": "A retry that is not bounded is not a recovery strategy. 'Retry with exponential backoff' should always come with a ceiling in the answer you pick."
+      },
+      {
+        "id": "order-failure-propagation",
+        "type": "order",
+        "title": "Propagate a subagent failure",
+        "principle": "fix-earliest-layer",
+        "prompt": "A subagent's tool call fails partway through a multi-agent run. Order the handling.",
+        "items": [
+          {
+            "id": "local-retry",
+            "label": "The subagent retries locally, once or twice"
+          },
+          {
+            "id": "structure",
+            "label": "The subagent packages a structured error alongside whatever partial results it has"
+          },
+          {
+            "id": "propagate",
+            "label": "The error is returned to the coordinator"
+          },
+          {
+            "id": "decide",
+            "label": "The coordinator decides: retry modified, accept partial, or reroute"
+          },
+          {
+            "id": "annotate",
+            "label": "The gap is marked in the final synthesis"
+          }
+        ],
+        "correctOrder": [
+          "local-retry",
+          "structure",
+          "propagate",
+          "decide",
+          "annotate"
+        ],
+        "why": {
+          "local-retry": "Bounded local recovery comes first because propagating a transient blip costs a coordinator round-trip for nothing. Bounded is the operative word — one or two attempts, then tell the hub.",
+          "structure": "Partial results are worth more than a failure flag. Package what did succeed with a categorised error rather than discarding the work.",
+          "propagate": "The coordinator is the only component that can see the whole run, so it is the only one that can decide what a failure means for the goal.",
+          "decide": "Retry with modified inputs, accept the partial result, or route the work to a different subagent. This is the hub earning its place in the architecture.",
+          "annotate": "Last, because until the coordinator has decided, you do not yet know what the gap in the output is. Skipping this step is silent degradation — a confident-looking answer with a hole in it."
+        },
+        "hint": "Two of these are the classic failure modes, and they sit at opposite ends. One of them is doing too much before telling anyone; the other is not doing something at the end.",
+        "explanation": "The two ways this goes wrong are symmetric. Propagate first, and every hiccup escalates to the coordinator — the retry logic may as well not exist. Retry without a bound, and a failing subagent hangs the run while the hub sees nothing. 'One or two, then tell the hub' is the shape.\n\nDropping the final annotation is the quieter failure: the synthesis reads as complete, and nothing in it says which part is missing.",
+        "tip": "Any design where a partial failure disappears before the output is produced is wrong, however well the earlier steps are handled."
+      },
+      {
+        "id": "classify-mcp-scope",
+        "type": "classify",
+        "title": "Where does this MCP configuration go?",
+        "principle": "fix-earliest-layer",
+        "prompt": "Sort each item into the configuration file it belongs in.",
+        "buckets": [
+          {
+            "id": "project",
+            "label": "Project scope",
+            "blurb": "Committed with the repository"
+          },
+          {
+            "id": "personal",
+            "label": "Personal scope",
+            "blurb": "Your user-level config, not committed"
+          },
+          {
+            "id": "neither",
+            "label": "Neither",
+            "blurb": "Does not belong in a config file at all"
+          }
+        ],
+        "items": [
+          {
+            "id": "team-tracker",
+            "text": "The issue-tracker server every engineer on the team needs",
+            "bucket": "project",
+            "why": "A shared standard. Committing it means it arrives with the checkout."
+          },
+          {
+            "id": "prototype",
+            "text": "A server you are prototyping this afternoon",
+            "bucket": "personal",
+            "why": "Not the team's problem yet."
+          },
+          {
+            "id": "env-reference",
+            "text": "A reference to a token via an environment variable",
+            "bucket": "project",
+            "why": "The reference is committable precisely because the value is not."
+          },
+          {
+            "id": "token-value",
+            "text": "The token's actual value",
+            "bucket": "neither",
+            "why": "Never in either file. Personal scope is still a file on disk, and it is still not a secret store."
+          },
+          {
+            "id": "local-db",
+            "text": "A server that only works against your local database",
+            "bucket": "personal",
+            "why": "Machine-specific. Committing it breaks everyone else's setup."
+          },
+          {
+            "id": "mandated-vendor",
+            "text": "A vendor server the whole team was told to adopt",
+            "bucket": "project",
+            "why": "Shared requirement, shared file."
+          },
+          {
+            "id": "personal-override",
+            "text": "A personal override of a shared server's settings",
+            "bucket": "personal",
+            "why": "Overrides stay local. Editing the shared file changes it for everyone, which is not what an override means."
+          },
+          {
+            "id": "pasted-key",
+            "text": "Your API key pasted into the env block just for now",
+            "bucket": "neither",
+            "why": "The same trap phrased the way it actually happens."
+          }
+        ],
+        "hint": "Two of these are the same mistake written twice. Personal scope is private in the sense of 'not shared with the team' — which is not the same sense a credential needs.",
+        "explanation": "The axis is who needs it: everyone, or you. Shared requirements get committed so a fresh checkout works; machine-specific and experimental things stay local; personal overrides stay local by definition.\n\nThe third bucket exists for the trap. 'Not committed' is not the same as 'secret'. A token belongs in the environment, referenced from the config — which is why the reference itself is perfectly safe to commit.",
+        "tip": "When a config question offers 'put it in the personal file so it does not get committed' as a way to handle a credential, that is the distractor."
+      },
+      {
+        "id": "quiz-error-taxonomy",
+        "type": "quiz",
+        "title": "Drill: mapping the error categories",
+        "questionId": "mcp-316"
+      },
+      {
+        "id": "quiz-error-shape",
+        "type": "quiz",
+        "title": "Drill: signalling a tool-level error",
+        "questionId": "mcp-104"
+      },
+      {
+        "id": "quiz-config-scope",
+        "type": "quiz",
+        "title": "Drill: placing server configuration",
+        "questionId": "mcp-110"
+      },
+      {
+        "id": "quiz-scope-precedence",
+        "type": "quiz",
+        "title": "Drill: which server wins",
+        "questionId": "mcp-111"
+      },
+      {
+        "id": "quiz-resources",
+        "type": "quiz",
+        "title": "Drill: the resource primitive",
+        "questionId": "mcp-319"
+      }
+    ]
   }
 ]
