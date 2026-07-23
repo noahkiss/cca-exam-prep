@@ -1,1 +1,1022 @@
-[]
+[
+  {
+    "id": "arch-agentic-loop",
+    "domain": "arch",
+    "kind": "core",
+    "title": "The Agentic Loop",
+    "outcome": "Drive an agent loop off the response's stop_reason, name the completion signals that only look reliable, and tell an agent apart from a workflow.",
+    "objectives": [
+      "Sequence one iteration of the loop, from request to the next request",
+      "Map each stop_reason value to the action the caller must take",
+      "Separate deterministic completion evidence from inferences about it",
+      "Decide whether a workload wants a model-driven loop or a fixed sequence"
+    ],
+    "order": 1,
+    "estimatedMinutes": 18,
+    "principles": [
+      "elim-parse-text-for-completion",
+      "constrain-dont-add"
+    ],
+    "scenarioSets": [
+      "support-agent",
+      "data-extraction"
+    ],
+    "references": [
+      "https://platform.claude.com/docs/en/api/messages",
+      "https://code.claude.com/docs/en/agent-sdk/overview"
+    ],
+    "steps": [
+      {
+        "id": "teach-state-machine",
+        "type": "teach",
+        "title": "The loop is a state machine, not a function call",
+        "principle": "elim-parse-text-for-completion",
+        "body": "A request goes out carrying the message history and the tool definitions. The response comes back carrying a stop_reason. That field — not the prose the model wrote alongside it — decides what happens next: execute the requested tool and re-enter the loop, or surface the result and stop.\n\nThe difference from a hard-coded decision tree is who chooses the next step. In a fixed flow the caller picks which tool runs. In an agentic loop the model picks, using the tool results accumulated so far. The caller's remaining job is bookkeeping: run the tool that was requested, append the result to the history, and resend the whole history.\n\nThat bookkeeping is easy to get subtly wrong, and every way of getting it wrong looks like a model problem from the outside.",
+        "callout": {
+          "kind": "contrast",
+          "body": "Caller's job in a fixed workflow: decide what happens next. Caller's job in an agentic loop: execute, append, resend. If your loop code contains business logic about which tool should run, you have written a workflow with extra steps."
+        },
+        "tip": "The API is stateless. Nothing you fail to write back into the message history exists on the next turn."
+      },
+      {
+        "id": "order-one-iteration",
+        "type": "order",
+        "title": "Sequence one iteration",
+        "principle": "elim-parse-text-for-completion",
+        "prompt": "One iteration of an agentic loop, from a fresh request to the point where the next request goes out. Put the stages in order.",
+        "items": [
+          {
+            "id": "send",
+            "label": "Send the message history plus tool definitions to the API"
+          },
+          {
+            "id": "receive",
+            "label": "Receive the response object"
+          },
+          {
+            "id": "inspect",
+            "label": "Read stop_reason off the response"
+          },
+          {
+            "id": "exec",
+            "label": "Execute the tool the model requested"
+          },
+          {
+            "id": "append",
+            "label": "Append the tool result to the message history"
+          },
+          {
+            "id": "resend",
+            "label": "Send the extended history back for the next iteration"
+          }
+        ],
+        "correctOrder": [
+          "send",
+          "receive",
+          "inspect",
+          "exec",
+          "append",
+          "resend"
+        ],
+        "why": {
+          "send": "The tool definitions have to be in the request or the model has nothing it can call.",
+          "receive": "Nothing is decidable before the response object exists.",
+          "inspect": "This is the branch point. Every anti-pattern in this module is a substitute for reading this field.",
+          "exec": "The model emits a request to call a tool. It never makes the call itself — the caller does.",
+          "append": "The API is stateless. A result that is not written into the history does not exist next turn.",
+          "resend": "Full history every time, not a delta."
+        },
+        "hint": "Two of these stages are pure bookkeeping and the loop is silently broken without them. Which stage produces the thing the next stage consumes?",
+        "explanation": "Every adjacency here is a real data dependency: you cannot append a result you have not produced, and you cannot resend a history you have not extended. There is no acceptable alternate ordering for this step.",
+        "tip": "The single most common broken implementation skips the append stage. The model then re-requests the same tool forever, and the author blames the model."
+      },
+      {
+        "id": "classify-stop-reason",
+        "type": "classify",
+        "title": "stop_reason value to caller action",
+        "principle": "elim-parse-text-for-completion",
+        "prompt": "A response has come back. For each stop_reason value, what does the caller do with it?",
+        "buckets": [
+          {
+            "id": "continue",
+            "label": "Continue the loop",
+            "blurb": "Execute the requested tool, append the result, iterate"
+          },
+          {
+            "id": "done",
+            "label": "Turn is finished",
+            "blurb": "Surface the result"
+          },
+          {
+            "id": "truncated",
+            "label": "Output was cut off",
+            "blurb": "The response is incomplete"
+          },
+          {
+            "id": "app-defined",
+            "label": "Caller's own protocol decides",
+            "blurb": "The meaning is application-specific"
+          }
+        ],
+        "items": [
+          {
+            "id": "tool-use",
+            "text": "stop_reason: \"tool_use\"",
+            "bucket": "continue",
+            "why": "The model has emitted a tool-call request and is waiting on the result."
+          },
+          {
+            "id": "end-turn",
+            "text": "stop_reason: \"end_turn\"",
+            "bucket": "done",
+            "why": "The model reached a natural end. This is the only completion signal that is not an inference."
+          },
+          {
+            "id": "max-tokens",
+            "text": "stop_reason: \"max_tokens\"",
+            "bucket": "truncated",
+            "why": "The output hit the ceiling. Treating this as completion ships a half-written answer as a finished one."
+          },
+          {
+            "id": "stop-sequence",
+            "text": "stop_reason: \"stop_sequence\"",
+            "bucket": "app-defined",
+            "why": "A sequence the caller configured was emitted. Only the caller knows what it was supposed to mean."
+          }
+        ],
+        "hint": "Two of these mean the work is not finished, and they mean it for opposite reasons. One of them is a trap precisely because the text alongside it can read as a complete answer.",
+        "explanation": "The exam cares most about telling tool_use apart from end_turn — that is the loop's branch. The other two matter because mistaking either of them for completion is the failure mode: max_tokens ships a truncated answer, and stop_sequence hands control back without saying why.",
+        "tip": "Treat this as four values you must handle, not as the complete list of values that exist. Source the full set from the Messages API reference rather than from any study guide."
+      },
+      {
+        "id": "classify-completion-signal",
+        "type": "classify",
+        "title": "Which completion signals are actually reliable?",
+        "principle": "elim-parse-text-for-completion",
+        "prompt": "Your loop needs to know the agent has finished. Sort each candidate signal by whether it is deterministic evidence or an inference about it.",
+        "buckets": [
+          {
+            "id": "reliable",
+            "label": "Reliable",
+            "blurb": "Deterministic evidence"
+          },
+          {
+            "id": "unreliable",
+            "label": "Unreliable",
+            "blurb": "An inference, a guess, or a guard misread as a result"
+          }
+        ],
+        "items": [
+          {
+            "id": "end-turn",
+            "text": "stop_reason equals end_turn",
+            "bucket": "reliable",
+            "why": "The API's own signal. Everything else on this list is a guess about it."
+          },
+          {
+            "id": "says-finished",
+            "text": "The assistant's text says the task is finished",
+            "bucket": "unreliable",
+            "why": "Free text is generated, not asserted. A model can narrate completion in the middle of a workflow."
+          },
+          {
+            "id": "iteration-cap",
+            "text": "The iteration counter hit its cap",
+            "bucket": "unreliable",
+            "why": "A cap is a runaway guard. Firing it means the loop failed to converge, not that it succeeded."
+          },
+          {
+            "id": "text-block",
+            "text": "The response contains a text block instead of a tool-call block",
+            "bucket": "unreliable",
+            "why": "It correlates with completion but infers the state from content shape, and it also reads as done on a truncated response."
+          },
+          {
+            "id": "empty-tool-list",
+            "text": "The response's tool-call list is empty",
+            "bucket": "unreliable",
+            "why": "Same defect. It infers the state instead of reading it, and cannot tell finished apart from cut off."
+          },
+          {
+            "id": "stop-sequence-emitted",
+            "text": "The model emitted the caller's configured stop sequence",
+            "bucket": "unreliable",
+            "why": "The model has to remember to emit it. Probabilistic by construction."
+          },
+          {
+            "id": "validator-confirmed",
+            "text": "A downstream validator confirmed the artifact the agent was asked to produce",
+            "bucket": "reliable",
+            "why": "Not a loop-control signal, but genuine evidence: it checks the world rather than the transcript. Pair it with end_turn, never substitute it."
+          }
+        ],
+        "hint": "Reliable does not mean 'it is an API field'. It means the signal cannot be wrong when the underlying state is different. One non-API item on this list clears that bar.",
+        "explanation": "The dividing line is deterministic evidence versus inference. Everything in the unreliable bucket reads the transcript and guesses at the state — and most of them cannot distinguish 'finished' from 'cut off'. The validator row is the hard one on purpose: it is reliable because it inspects the artifact itself, not because it comes from the API.",
+        "tip": "Parsing the model's prose for completion is a documented elimination rule: an answer that detects completion by reading text is almost always the wrong one."
+      },
+      {
+        "id": "classify-agent-vs-workflow",
+        "type": "classify",
+        "title": "Agent or workflow?",
+        "principle": "constrain-dont-add",
+        "prompt": "For each workload, decide whether the path is known in advance (a fixed sequence of prompts) or discovered during execution (a model-driven loop).",
+        "buckets": [
+          {
+            "id": "workflow",
+            "label": "Workflow",
+            "blurb": "Fixed sequence, path known in advance"
+          },
+          {
+            "id": "agent",
+            "label": "Agent",
+            "blurb": "Model-driven loop, path discovered during execution"
+          }
+        ],
+        "items": [
+          {
+            "id": "invoices",
+            "text": "Every incoming invoice runs the same extract, validate, enrich sequence",
+            "bucket": "workflow",
+            "why": "The steps never vary. A loop adds nondeterminism and buys nothing."
+          },
+          {
+            "id": "nightly-job",
+            "text": "Find out why a nightly job started failing last week",
+            "bucket": "agent",
+            "why": "Each finding changes what to look at next."
+          },
+          {
+            "id": "translate",
+            "text": "Translate each of 400 product blurbs, one call apiece",
+            "bucket": "workflow",
+            "why": "This is not even a chain, it is a map. Wrapping it in an agent is over-architecture."
+          },
+          {
+            "id": "test-coverage",
+            "text": "Add test coverage to an unfamiliar module",
+            "bucket": "agent",
+            "why": "The structure has to be mapped before the subtasks exist."
+          },
+          {
+            "id": "release-note",
+            "text": "Generate a release note from a fixed changelog template",
+            "bucket": "workflow",
+            "why": "Deterministic input, deterministic template."
+          },
+          {
+            "id": "repro-bug",
+            "text": "Reproduce a customer bug report with unclear steps",
+            "bucket": "agent",
+            "why": "The reproduction path is the unknown."
+          },
+          {
+            "id": "pr-checklist",
+            "text": "Review a 3-file pull request against a written checklist",
+            "bucket": "workflow",
+            "why": "The checklist fixes the passes in advance."
+          },
+          {
+            "id": "triage-alert",
+            "text": "Triage an alert that may be infrastructure, application, or data",
+            "bucket": "agent",
+            "why": "The routing decision depends on evidence gathered along the way."
+          }
+        ],
+        "hint": "Ask whether you could draw the flowchart before running it.",
+        "explanation": "If the flowchart is drawable up front, it is a workflow, and building it as an agent trades determinism for nothing. If the next step genuinely depends on what the previous step found, a fixed chain cannot express the work. Volume is not the deciding factor — 400 identical translations are still a workflow.",
+        "tip": "Adding agency is the most common over-engineering answer on this exam. Constrain rather than add: the correct answer usually removes freedom the system did not need."
+      },
+      {
+        "id": "quiz-stop-reason-field",
+        "type": "quiz",
+        "title": "Drill: reading the loop's branch point",
+        "questionId": "arch-101"
+      },
+      {
+        "id": "quiz-detect-completion",
+        "type": "quiz",
+        "title": "Drill: detecting completion",
+        "questionId": "arch-004"
+      },
+      {
+        "id": "quiz-runaway-loop",
+        "type": "quiz",
+        "title": "Drill: the runaway loop",
+        "questionId": "arch-102"
+      },
+      {
+        "id": "quiz-tool-results",
+        "type": "quiz",
+        "title": "Drill: returning tool results",
+        "questionId": "arch-103"
+      }
+    ]
+  },
+  {
+    "id": "arch-coordinators-subagents",
+    "domain": "arch",
+    "kind": "core",
+    "title": "Coordinators, Subagents & Context Handoff",
+    "outcome": "State exactly what a subagent arrives with, write a delegation that carries its own context, and tell parallel work apart from work that only looks parallel.",
+    "objectives": [
+      "Describe the coordinator's role in a hub-and-spoke system",
+      "Sort what a subagent has, what must be passed to it, and what it can fetch",
+      "Avoid both over-claiming and under-claiming what a subagent inherits",
+      "Decide which delegations can be spawned in one turn and which must be sequenced"
+    ],
+    "order": 2,
+    "estimatedMinutes": 16,
+    "prerequisites": [
+      "arch-agentic-loop"
+    ],
+    "principles": [
+      "fix-earliest-layer",
+      "constrain-dont-add"
+    ],
+    "scenarioSets": [
+      "multi-agent-research",
+      "code-gen"
+    ],
+    "references": [
+      "https://code.claude.com/docs/en/agent-sdk/subagents",
+      "https://code.claude.com/docs/en/sub-agents"
+    ],
+    "steps": [
+      {
+        "id": "teach-hub-and-spoke",
+        "type": "teach",
+        "title": "The coordinator owns the wires",
+        "principle": "fix-earliest-layer",
+        "body": "A multi-agent system is a hub and spokes. The coordinator decomposes the work, decides which subagents are needed, delegates, aggregates what comes back, validates it, retries what failed, and reports.\n\nSubagents do not talk to each other. Everything transits the hub. That constraint is not bureaucracy — it is what makes the system observable and gives failures exactly one place to be handled. A system where spoke A can call spoke B has no single point that knows what the run is doing.\n\nThe practical consequence is that a subagent's inbound channel is the delegation prompt. Whatever it needs is either written into that prompt, attached to its own configuration, or reachable through its own tools.",
+        "callout": {
+          "kind": "warn",
+          "body": "A subagent starts fresh, but not empty. It does not get the coordinator's conversation history, the coordinator's earlier tool results, or a sibling's output. It does get its own configuration — its system prompt, the tools its definition grants it, and (in Claude Code) the project memory hierarchy. 'A subagent has nothing at all' is as wrong as 'a subagent sees what I see'."
+        },
+        "tip": "Both directions of this claim are examinable. Over-claiming inheritance is the classic trap; under-claiming it is the trap that catches people who over-corrected."
+      },
+      {
+        "id": "classify-inheritance",
+        "type": "classify",
+        "title": "What does the subagent actually have?",
+        "principle": "fix-earliest-layer",
+        "prompt": "A coordinator is about to delegate. For each item, decide whether the subagent already has it, whether the coordinator must put it in the prompt, or whether the subagent can go and get it.",
+        "buckets": [
+          {
+            "id": "has-it",
+            "label": "Has it",
+            "blurb": "Present without any further action"
+          },
+          {
+            "id": "must-pass",
+            "label": "Must be passed",
+            "blurb": "Absent unless the coordinator writes it into the prompt"
+          },
+          {
+            "id": "can-fetch",
+            "label": "Can fetch it",
+            "blurb": "Not present, but reachable with its own tools"
+          }
+        ],
+        "items": [
+          {
+            "id": "task-prompt",
+            "text": "The text of the delegation prompt",
+            "bucket": "has-it",
+            "why": "This is the entire inbound channel."
+          },
+          {
+            "id": "own-config",
+            "text": "Its own system prompt and agent configuration",
+            "bucket": "has-it",
+            "why": "Attached to the subagent definition, not to the call."
+          },
+          {
+            "id": "own-tools",
+            "text": "The tool definitions its configuration grants it",
+            "bucket": "has-it",
+            "why": "Tools come from the definition. This is why 'a subagent inherits nothing' over-corrects."
+          },
+          {
+            "id": "project-memory",
+            "text": "Project conventions from the memory hierarchy the whole session loads",
+            "bucket": "has-it",
+            "why": "Standing project instructions are loaded for the subagent too. What it loses is the conversation, not the configuration."
+          },
+          {
+            "id": "coordinator-history",
+            "text": "The coordinator's conversation history",
+            "bucket": "must-pass",
+            "why": "Isolated context. This is the single most-tested trap in the domain."
+          },
+          {
+            "id": "earlier-tool-results",
+            "text": "Tool results the coordinator collected earlier",
+            "bucket": "must-pass",
+            "why": "They live in the coordinator's window only."
+          },
+          {
+            "id": "sibling-findings",
+            "text": "A sibling subagent's findings",
+            "bucket": "must-pass",
+            "why": "Siblings never communicate directly. The hub relays."
+          },
+          {
+            "id": "user-request",
+            "text": "The user's original request",
+            "bucket": "must-pass",
+            "why": "It feels inherited. It is not."
+          },
+          {
+            "id": "previous-invocation",
+            "text": "Whatever it learned on a previous invocation",
+            "bucket": "must-pass",
+            "why": "No memory across calls. Persist it yourself if you need it."
+          },
+          {
+            "id": "file-by-path",
+            "text": "A file on disk, given its path in the prompt",
+            "bucket": "can-fetch",
+            "why": "The path must be passed; the bytes need not be. This is the large-artifact handoff."
+          },
+          {
+            "id": "public-url",
+            "text": "A public URL named in the prompt",
+            "bucket": "can-fetch",
+            "why": "Given a fetch tool. Note the tool has to be in its scope, or this becomes must-pass."
+          }
+        ],
+        "hint": "Separate the two things a subagent arrives with: its configuration, and its conversation. One of those is inherited in full and one of those is empty.",
+        "explanation": "Configuration travels; conversation does not. Anything that lived in the coordinator's window — history, earlier results, a sibling's output, the user's own words — is gone unless written into the prompt. Anything attached to the subagent's definition is present. The can-fetch bucket is the cost-saver: pass a pointer, not a payload, and let the subagent pull only what it needs.",
+        "tip": "When you are unsure which bucket something is in, it is must-pass. Being wrong in that direction costs a few tokens; being wrong the other way costs a silent failure."
+      },
+      {
+        "id": "classify-parallel-eligible",
+        "type": "classify",
+        "title": "One turn or several?",
+        "principle": "constrain-dont-add",
+        "prompt": "The coordinator has eight pieces of work. Sort them by whether they can be spawned together in a single coordinator response or must wait for an earlier result.",
+        "buckets": [
+          {
+            "id": "same-turn",
+            "label": "Same turn",
+            "blurb": "Spawn together in one coordinator response"
+          },
+          {
+            "id": "must-sequence",
+            "label": "Must sequence",
+            "blurb": "Needs a prior subagent's output"
+          }
+        ],
+        "items": [
+          {
+            "id": "three-topics",
+            "text": "Search three separate topic areas",
+            "bucket": "same-turn",
+            "why": "Independent inputs, independent outputs."
+          },
+          {
+            "id": "summarise-findings",
+            "text": "Summarise the findings that those three searches produced",
+            "bucket": "must-sequence",
+            "why": "Its input does not exist yet."
+          },
+          {
+            "id": "four-docs",
+            "text": "Analyse each of four uploaded documents",
+            "bucket": "same-turn",
+            "why": "Per-document work shares nothing."
+          },
+          {
+            "id": "cross-check",
+            "text": "Cross-check claim A against claim B, where B comes from another subagent",
+            "bucket": "must-sequence",
+            "why": "A genuine data dependency."
+          },
+          {
+            "id": "draft-sections",
+            "text": "Draft one section per chapter of an agreed outline",
+            "bucket": "same-turn",
+            "why": "The outline is the shared input; the drafts are not inputs to each other."
+          },
+          {
+            "id": "produce-outline",
+            "text": "Produce the outline those drafters will use",
+            "bucket": "must-sequence",
+            "why": "It is the shared input, so it has to exist first."
+          },
+          {
+            "id": "verify-citations",
+            "text": "Verify the citations in a completed draft",
+            "bucket": "must-sequence",
+            "why": "Needs the draft."
+          },
+          {
+            "id": "five-regions",
+            "text": "Run the same extraction over five regional datasets",
+            "bucket": "same-turn",
+            "why": "Sectioning the same work across inputs, not chaining."
+          }
+        ],
+        "hint": "For each item, ask what its input is and whether that input is already sitting in the coordinator's hand.",
+        "explanation": "The test is purely whether the item's input is another item's output. Independence is what makes work parallelisable — not similarity, and not how long it takes. Note the pairs: the searches are parallel and their summary is not; the drafts are parallel and the outline they share is not.",
+        "tip": "Parallel spawning means several delegations in one coordinator response. Two delegations in two consecutive turns is sequential no matter what you call it."
+      },
+      {
+        "id": "quiz-context-handoff",
+        "type": "quiz",
+        "title": "Drill: passing data across the isolation boundary",
+        "questionId": "arch-313"
+      },
+      {
+        "id": "quiz-parallel-spawn",
+        "type": "quiz",
+        "title": "Drill: spawning in parallel",
+        "questionId": "arch-109"
+      },
+      {
+        "id": "quiz-route-through-hub",
+        "type": "quiz",
+        "title": "Drill: why everything transits the hub",
+        "questionId": "arch-323"
+      },
+      {
+        "id": "quiz-execution-schedule",
+        "type": "quiz",
+        "title": "Drill: scheduling dependent and independent work",
+        "questionId": "arch-105"
+      }
+    ]
+  },
+  {
+    "id": "arch-decomposition-enforcement",
+    "domain": "arch",
+    "kind": "core",
+    "title": "Decomposition & Enforcement Points",
+    "outcome": "Choose the layer a rule has to live in for the guarantee it needs, and decompose work into passes whose ordering you can defend.",
+    "objectives": [
+      "Explain why a rule in a prompt and the same rule in code are different guarantees",
+      "Place a stated rule at the right enforcement point among prompt, examples, hooks, schema and code",
+      "Tell a PreToolUse concern apart from a PostToolUse one",
+      "Order a pipeline correctly and recognise which stages are genuinely commutative",
+      "Decide between a fixed chain and adaptive decomposition"
+    ],
+    "order": 3,
+    "estimatedMinutes": 22,
+    "prerequisites": [
+      "arch-agentic-loop"
+    ],
+    "principles": [
+      "prompts-suggest-systems-enforce",
+      "elim-prompt-for-guarantee",
+      "fix-earliest-layer",
+      "match-fix-to-failure"
+    ],
+    "scenarioSets": [
+      "support-agent",
+      "data-extraction",
+      "code-gen"
+    ],
+    "references": [
+      "https://code.claude.com/docs/en/agent-sdk/hooks",
+      "https://code.claude.com/docs/en/hooks"
+    ],
+    "steps": [
+      {
+        "id": "teach-where-rules-live",
+        "type": "teach",
+        "title": "Where a rule lives determines whether it holds",
+        "principle": "prompts-suggest-systems-enforce",
+        "body": "A rule written into a prompt is followed most of the time. The same rule expressed in code, in a hook, or in a schema is followed every time. That is a categorical difference, not a difference of degree, and no amount of rewording closes it.\n\nSo the architect's question is never 'how do I word this'. It is 'what is the consequence of the one time it does not hold'. If the answer involves money moving, access being granted, an irreversible action, or an ordering that downstream code depends on, the rule has to sit somewhere the model cannot route around it.\n\nThe corollary is just as important: rules whose occasional violation costs nothing — tone, house spelling, formatting preferences — belong in the prompt. Enforcing those in code is its own kind of over-engineering.",
+        "callout": {
+          "kind": "contrast",
+          "body": "Prompt: the model is asked. Schema, hook, or code: the model is not consulted. Pick by consequence of failure, not by how important the rule feels."
+        },
+        "tip": "Beware answers that promise a guarantee from better prompt wording. 'Add a strongly worded instruction' is almost never the right fix for a rule that must hold every time."
+      },
+      {
+        "id": "classify-hook-event",
+        "type": "classify",
+        "title": "Before or after the tool runs?",
+        "principle": "prompts-suggest-systems-enforce",
+        "prompt": "Each of these needs a hook. Decide whether it inspects a pending tool call or transforms a result that already came back.",
+        "buckets": [
+          {
+            "id": "pre",
+            "label": "PreToolUse",
+            "blurb": "Inspects a pending call; can block or redirect it"
+          },
+          {
+            "id": "post",
+            "label": "PostToolUse",
+            "blurb": "Transforms a tool result before the model sees it"
+          }
+        ],
+        "items": [
+          {
+            "id": "amount-threshold",
+            "text": "Block a call whose amount exceeds a threshold",
+            "bucket": "pre",
+            "why": "It must happen before execution, or the money already moved."
+          },
+          {
+            "id": "epoch-timestamps",
+            "text": "Convert epoch timestamps to a single date format",
+            "bucket": "post",
+            "why": "The result is the thing that needs fixing."
+          },
+          {
+            "id": "redirect-policy",
+            "text": "Redirect a policy-violating call to escalation instead",
+            "bucket": "pre",
+            "why": "Same turn, different destination — only possible before the call runs."
+          },
+          {
+            "id": "strip-fields",
+            "text": "Strip unused fields from a verbose response",
+            "bucket": "post",
+            "why": "Context hygiene on the way in."
+          },
+          {
+            "id": "confirm-irreversible",
+            "text": "Require confirmation before an irreversible action",
+            "bucket": "pre",
+            "why": "The gate is the entire point."
+          },
+          {
+            "id": "redact-secrets",
+            "text": "Redact secrets that a tool returned",
+            "bucket": "post",
+            "why": "Keep them out of the context window entirely."
+          },
+          {
+            "id": "reject-args",
+            "text": "Reject a call whose arguments fail a business rule",
+            "bucket": "pre",
+            "why": "Validation of a call is a pre-execution concern."
+          },
+          {
+            "id": "attach-source",
+            "text": "Attach the source URL to each returned record",
+            "bucket": "post",
+            "why": "Provenance enrichment applied to the result."
+          }
+        ],
+        "hint": "Ask what the hook is protecting: the world, or the context window.",
+        "explanation": "PreToolUse protects the world — it is the only place you can stop something from happening. PostToolUse protects the context window and the model's reasoning — it shapes what the model gets to see. If undoing the action would be impossible or expensive, you needed pre.",
+        "tip": "If a PreToolUse hook blocks the call, there is no result for a PostToolUse hook to act on. Chaining a post hook as a safety net behind a pre hook does not give you two chances."
+      },
+      {
+        "id": "classify-enforcement-point",
+        "type": "classify",
+        "title": "Pick the enforcement point",
+        "principle": "prompts-suggest-systems-enforce",
+        "prompt": "For each requirement, choose the layer that actually delivers the guarantee it needs — no stronger, no weaker.",
+        "buckets": [
+          {
+            "id": "prompt",
+            "label": "System prompt",
+            "blurb": "An instruction in the prompt"
+          },
+          {
+            "id": "fewshot",
+            "label": "Few-shot examples",
+            "blurb": "Worked examples in the prompt"
+          },
+          {
+            "id": "pre",
+            "label": "PreToolUse hook",
+            "blurb": "Inspects a pending tool call; can block or redirect"
+          },
+          {
+            "id": "post",
+            "label": "PostToolUse hook",
+            "blurb": "Transforms a tool result before the model sees it"
+          },
+          {
+            "id": "schema",
+            "label": "Schema",
+            "blurb": "The tool's input schema or structured-output contract"
+          },
+          {
+            "id": "code",
+            "label": "Application code",
+            "blurb": "Deterministic pipeline logic, outside any tool call"
+          }
+        ],
+        "items": [
+          {
+            "id": "refund-cap",
+            "text": "A refund above the policy cap must never execute",
+            "bucket": "pre",
+            "why": "A specific pending call has to be stopped. Wording alone leaves a residual failure rate, and the failures involve money."
+          },
+          {
+            "id": "date-formats",
+            "text": "Three MCP servers return dates in three different formats",
+            "bucket": "post",
+            "why": "Normalise on the way in so the model never reasons over mixed formats."
+          },
+          {
+            "id": "delete-prod",
+            "text": "A delete tool must never target production",
+            "bucket": "pre",
+            "why": "Irreversible. The call itself is the thing to block."
+          },
+          {
+            "id": "verbose-results",
+            "text": "Tool results arrive with 40 fields when 5 are used",
+            "bucket": "post",
+            "why": "Trim it before it reaches the window."
+          },
+          {
+            "id": "closed-category",
+            "text": "Extracted records must always carry a category from a closed set",
+            "bucket": "schema",
+            "why": "An enum makes the invalid value unrepresentable rather than merely discouraged."
+          },
+          {
+            "id": "omit-not-guess",
+            "text": "A field should be omitted rather than guessed when the source does not contain it",
+            "bucket": "schema",
+            "why": "Make it nullable or optional. A prompt asking the model not to guess is fighting a required field."
+          },
+          {
+            "id": "enrich-after-validate",
+            "text": "The enrichment stage must not start until validation passes",
+            "bucket": "code",
+            "why": "Sequencing between pipeline stages. There is no tool call to intercept."
+          },
+          {
+            "id": "batch-ids",
+            "text": "A batch must not be submitted until every input carries an id",
+            "bucket": "code",
+            "why": "A precondition on the caller's own flow, checked before anything is sent."
+          },
+          {
+            "id": "british-spelling",
+            "text": "Prefer British spelling in user-facing copy",
+            "bucket": "prompt",
+            "why": "Cosmetic. An occasional miss costs nothing, and enforcing it in code is over-engineering."
+          },
+          {
+            "id": "warm-tone",
+            "text": "Replies should stay warm when a customer is frustrated",
+            "bucket": "prompt",
+            "why": "Tone. Not mechanically enforceable, and not worth enforcing."
+          },
+          {
+            "id": "bug-vs-defect",
+            "text": "Classifications keep drifting between \"bug\" and \"defect\" for similar tickets",
+            "bucket": "fewshot",
+            "why": "Inconsistent output on a judgement call is the textbook signal for examples."
+          },
+          {
+            "id": "edge-case-tickets",
+            "text": "Edge-case tickets get categorised inconsistently and no wording has fixed it",
+            "bucket": "fewshot",
+            "why": "The pattern is easier to show than to state — and prose has already been tried."
+          },
+          {
+            "id": "five-attempts",
+            "text": "The agent should stop after five failed attempts",
+            "bucket": "code",
+            "why": "A runaway guard belongs to the driver. It is not loop control and it is not a request to the model."
+          }
+        ],
+        "hint": "Work in two passes. First ask what kind of failure this is — a wrong action, a wrong shape, or a wrong style. Then ask what it costs when it happens once.",
+        "explanation": "Three rules resolve almost every item. Match the fix to the failure: inconsistent judgement wants examples, a malformed value wants a schema, a forbidden action wants a gate. Fix at the earliest layer that can hold: a schema that makes a bad value unrepresentable beats a hook that catches it. And do not over-enforce: tone and spelling belong in the prompt, and putting them in code buys nothing.\n\nWatch the pre-versus-code boundary. PreToolUse is for rules about a tool call that is about to happen. Application code is for rules about pipeline flow where no tool call is involved at all.",
+        "tip": "This step is the exam's second principle made mechanical. If an answer offers a guarantee and the mechanism is prompt wording, it is almost certainly the distractor."
+      },
+      {
+        "id": "order-extraction-pipeline",
+        "type": "order",
+        "title": "Order the extraction pipeline",
+        "principle": "fix-earliest-layer",
+        "prompt": "A document-processing pipeline has six stages. Put them in a workable order.",
+        "items": [
+          {
+            "id": "ingest",
+            "label": "Accept the document"
+          },
+          {
+            "id": "metadata",
+            "label": "Extract document-level metadata"
+          },
+          {
+            "id": "extract",
+            "label": "Extract the field data"
+          },
+          {
+            "id": "validate",
+            "label": "Check the extraction"
+          },
+          {
+            "id": "enrich",
+            "label": "Add external data"
+          },
+          {
+            "id": "emit",
+            "label": "Produce the final record"
+          }
+        ],
+        "correctOrder": [
+          "ingest",
+          "metadata",
+          "extract",
+          "validate",
+          "enrich",
+          "emit"
+        ],
+        "acceptableOrders": [
+          [
+            "ingest",
+            "extract",
+            "metadata",
+            "validate",
+            "enrich",
+            "emit"
+          ]
+        ],
+        "why": {
+          "ingest": "Nothing can run before the document exists in the pipeline.",
+          "metadata": "Document-level metadata and field extraction are independent reads of the same source. Convention puts metadata first — some designs force it with a required first call — but it is a convention, not a dependency, so the two orders are both accepted.",
+          "extract": "The field data is what everything downstream operates on.",
+          "validate": "Load-bearing: validation has to precede enrichment. Enriching a bad extraction spends an external call and then buries the error underneath the enriched data.",
+          "enrich": "External data is added only to an extraction already known to be sound.",
+          "emit": "Last by definition — it is the pipeline's output."
+        },
+        "hint": "Two of these stages are genuinely interchangeable. The other four have a hard constraint each, and one of those constraints is the reason a broken record ever reaches production.",
+        "explanation": "The two constraints that matter are validate-before-enrich and emit-last. Enriching first is the expensive mistake: you pay for the external lookup and you make the original defect harder to see. Metadata and field extraction are commutative, which is why both orders grade as correct here rather than one being declared canonical.",
+        "tip": "When a step's inputs do not include another step's outputs, the ordering between them is yours to choose — and that is also the signal that they could run in parallel."
+      },
+      {
+        "id": "order-multipass-review",
+        "type": "order",
+        "title": "Order the review passes",
+        "principle": "constrain-dont-add",
+        "prompt": "A pull request touches several files and needs a thorough review. Order the passes.",
+        "items": [
+          {
+            "id": "f-auth",
+            "label": "Analyse auth.ts in isolation"
+          },
+          {
+            "id": "f-db",
+            "label": "Analyse database.ts in isolation"
+          },
+          {
+            "id": "f-routes",
+            "label": "Analyse routes.ts in isolation"
+          },
+          {
+            "id": "integration",
+            "label": "Analyse the relationships across the files"
+          }
+        ],
+        "correctOrder": [
+          "f-auth",
+          "f-db",
+          "f-routes",
+          "integration"
+        ],
+        "acceptableOrders": [
+          [
+            "f-auth",
+            "f-routes",
+            "f-db",
+            "integration"
+          ],
+          [
+            "f-db",
+            "f-auth",
+            "f-routes",
+            "integration"
+          ],
+          [
+            "f-db",
+            "f-routes",
+            "f-auth",
+            "integration"
+          ],
+          [
+            "f-routes",
+            "f-auth",
+            "f-db",
+            "integration"
+          ],
+          [
+            "f-routes",
+            "f-db",
+            "f-auth",
+            "integration"
+          ]
+        ],
+        "why": {
+          "f-auth": "One file at a time keeps analysis depth even. A single sweeping pass goes deep on the first files and shallow on the rest, and will flag a pattern in one file that it waved through in another.",
+          "f-db": "Nothing about auth.ts informs this pass, and nothing here informs the routes pass. The per-file passes are genuinely commutative.",
+          "f-routes": "Same. Because these three share no inputs or outputs, any order of them is correct — which is also exactly why they can be parallel subagents.",
+          "integration": "Last, and the only real constraint here. Cross-file defects — inconsistent types, cycles, boundary mismatches — are invisible from inside any single file, and this pass consumes the per-file findings."
+        },
+        "hint": "Only one of these four has an input that another produces.",
+        "explanation": "Any order of the three per-file passes is accepted, because they are independent by construction. The integration pass must come last: its input is the output of the others. Recognising commutativity is not pedantry — it is the same test that tells you which delegations can be spawned in a single turn.",
+        "tip": "An ordering question where several orders are equally correct is telling you something about the architecture, not testing your memory of a canonical sequence."
+      },
+      {
+        "id": "classify-fixed-vs-adaptive",
+        "type": "classify",
+        "title": "Fixed chain or adaptive decomposition?",
+        "principle": "constrain-dont-add",
+        "prompt": "For each task, decide whether the subtasks can be enumerated before you start or have to be generated from what you find along the way.",
+        "buckets": [
+          {
+            "id": "fixed",
+            "label": "Fixed chain",
+            "blurb": "Steps enumerable up front"
+          },
+          {
+            "id": "adaptive",
+            "label": "Adaptive",
+            "blurb": "Subtasks generated from intermediate results"
+          }
+        ],
+        "items": [
+          {
+            "id": "compliance-review",
+            "text": "Monthly compliance review against a fixed template",
+            "bucket": "fixed",
+            "why": "The same steps every month."
+          },
+          {
+            "id": "legacy-tests",
+            "text": "Add tests to this legacy service",
+            "bucket": "adaptive",
+            "why": "You have to map the code before you know what the work is."
+          },
+          {
+            "id": "import-migration",
+            "text": "Migrate 60 files to a new import style",
+            "bucket": "fixed",
+            "why": "Mechanical and enumerable. Volume is not complexity."
+          },
+          {
+            "id": "intermittent-failure",
+            "text": "Trace an intermittent production failure",
+            "bucket": "adaptive",
+            "why": "Each finding redirects the next step."
+          },
+          {
+            "id": "invoice-fields",
+            "text": "Extract the same twelve fields from each invoice",
+            "bucket": "fixed",
+            "why": "The fields are known before the first document arrives."
+          },
+          {
+            "id": "library-assessment",
+            "text": "Assess whether a third-party library is safe to adopt",
+            "bucket": "adaptive",
+            "why": "The scope emerges: licence, maintenance, transitive dependencies, known vulnerabilities — and which of those matter depends on what you find."
+          },
+          {
+            "id": "dashboard-summary",
+            "text": "Weekly summarisation of a fixed set of dashboards",
+            "bucket": "fixed",
+            "why": "Fixed inputs, fixed output shape."
+          },
+          {
+            "id": "reports-disagree",
+            "text": "Work out why two reports disagree",
+            "bucket": "adaptive",
+            "why": "The cause of the discrepancy determines where to look next."
+          }
+        ],
+        "hint": "Could you write the list of subtasks down before you begin, and would it still be right at the end?",
+        "explanation": "The test is whether intermediate results change what the remaining work is. If they do not, a fixed chain is cheaper, more debuggable and more repeatable. Note that none of these are decided by size — a 60-file migration is fixed, and a single ambiguous bug report is adaptive.",
+        "tip": "Adaptive decomposition is the more powerful tool and the more common wrong answer. Reach for it only when the work genuinely cannot be enumerated."
+      },
+      {
+        "id": "quiz-spend-cap",
+        "type": "quiz",
+        "title": "Drill: enforcing a spend cap",
+        "questionId": "arch-006"
+      },
+      {
+        "id": "quiz-hook-type",
+        "type": "quiz",
+        "title": "Drill: choosing the hook",
+        "questionId": "arch-113"
+      },
+      {
+        "id": "quiz-hook-abort",
+        "type": "quiz",
+        "title": "Drill: what happens when a gate fires",
+        "questionId": "arch-114"
+      },
+      {
+        "id": "quiz-step-ordering",
+        "type": "quiz",
+        "title": "Drill: enforcing step order",
+        "questionId": "arch-112"
+      }
+    ]
+  }
+]
