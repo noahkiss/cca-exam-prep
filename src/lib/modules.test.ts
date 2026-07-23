@@ -2,7 +2,8 @@
 // that contract, not just coverage.
 
 import { describe, it, expect } from 'vitest';
-import { gradeClassify, gradeOrder, stepKey } from './modules';
+import { gradeClassify, gradeOrder, stepKey, MODULES } from './modules';
+import rawModules from '@/../data/modules.json';
 import type { ClassifyStep, OrderStep } from '@/types';
 
 const classify: ClassifyStep = {
@@ -70,5 +71,21 @@ describe('gradeOrder', () => {
 describe('stepKey', () => {
   it('namespaces module steps so they cannot collide with a question id', () => {
     expect(stepKey('arch-agentic-loop', 's1')).toBe('mod:arch-agentic-loop:s1');
+  });
+});
+
+// The loader drops a malformed module silently (by design — one bad entry must
+// not blank the page). That makes "authored" and "shipped" two different counts,
+// so assert they match: a module that fails validation fails CI instead.
+describe('authored modules all survive the loader', () => {
+  it('loads every entry in data/modules.json', () => {
+    expect(MODULES.length).toBe(rawModules.length);
+  });
+
+  it('ships at least one module per domain track', () => {
+    const domains = new Set(MODULES.map((m) => m.domain));
+    for (const d of ['arch', 'mcp', 'cc', 'pe', 'ctx']) {
+      expect(domains).toContain(d);
+    }
   });
 });

@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "validate": "node scripts/validate-questions.mjs && node scripts/validate-modules.mjs"
   },
   "dependencies": {
     "react": "^19.1.0",

@@ -1891,5 +1891,1912 @@
         "questionId": "mcp-319"
       }
     ]
+  },
+  {
+    "id": "cc-configuration-scope",
+    "domain": "cc",
+    "kind": "core",
+    "title": "Configuration Scope",
+    "outcome": "Place any project convention at the level where it actually loads for the people who need it — and nowhere else.",
+    "objectives": [
+      "Separate the two axes of configuration scope: who sees it, and when it loads",
+      "Choose between user, project, directory, path-scoped rule and skill for a given convention",
+      "Recognise the user-vs-project filing mistake before it silently costs a teammate",
+      "Tell a standing constraint apart from an on-demand workflow"
+    ],
+    "order": 1,
+    "estimatedMinutes": 16,
+    "principles": [
+      "prompts-suggest-systems-enforce",
+      "constrain-dont-add",
+      "fix-earliest-layer"
+    ],
+    "scenarioSets": [
+      "code-gen"
+    ],
+    "references": [
+      "https://code.claude.com/docs/en/memory",
+      "https://code.claude.com/docs/en/skills"
+    ],
+    "steps": [
+      {
+        "id": "teach-two-axes",
+        "type": "teach",
+        "title": "Two axes, not one ladder",
+        "principle": "prompts-suggest-systems-enforce",
+        "body": "Configuration is where a convention stops being a request and starts being a standing instruction. That makes the placement decision an enforcement decision, not a filing decision.\n\nPeople reach for a single mental ladder — personal, then project, then narrower — and that ladder answers only half the question. There are two independent axes.\n\nThe first is reach: who gets this. A file under your home directory follows you across every project and is never cloned with the repo. A file at the repo root is committed, so it binds everyone who checks the project out. A file inside a subdirectory binds work in that part of the tree.\n\nThe second is timing: when does it load. Memory files and path-scoped rule files are always in play — a rule file with a path pattern costs context only when a matching file is touched, but nobody has to remember to ask for it. A skill is the opposite: it sits idle until it is invoked, which makes it cheap to have and easy to miss.\n\nGetting reach right and timing wrong is a real failure. A six-step release checklist filed as an always-loaded standard burns context in every session that never releases anything. A hard constraint filed as a skill holds only on the sessions where somebody remembered to invoke it.",
+        "callout": {
+          "kind": "note",
+          "body": "One question settles the reach axis almost every time: would a teammate get this by cloning the repo? If the answer needs to be yes, it cannot live in your personal configuration — no matter how strongly you feel about it."
+        },
+        "tip": "Scope questions on the exam are rarely about syntax. They are about whether the convention loads for the person who needs it, at the moment they need it."
+      },
+      {
+        "id": "classify-where-it-lives",
+        "type": "classify",
+        "title": "Where does this convention live?",
+        "principle": "prompts-suggest-systems-enforce",
+        "prompt": "Each convention below needs a home. Place it at the level where it will actually load for the people who need it — and nowhere else.",
+        "buckets": [
+          {
+            "id": "user",
+            "label": "User memory",
+            "blurb": "Personal, machine-local, never cloned with the repo"
+          },
+          {
+            "id": "project",
+            "label": "Project memory",
+            "blurb": "Team-wide, committed, loads for everyone"
+          },
+          {
+            "id": "dir",
+            "label": "Directory-level memory",
+            "blurb": "Loads when working in that part of the tree"
+          },
+          {
+            "id": "rule",
+            "label": "Path-scoped rule file",
+            "blurb": "Loads only when a matching file is touched"
+          },
+          {
+            "id": "skill",
+            "label": "Skill",
+            "blurb": "Invoked on demand, not always loaded"
+          }
+        ],
+        "items": [
+          {
+            "id": "c1a",
+            "text": "Every service must return the standard {data, error} envelope",
+            "bucket": "project",
+            "why": "It binds all contributors, so it has to travel with the repository."
+          },
+          {
+            "id": "c1b",
+            "text": "I prefer terse commit messages and no emoji",
+            "bucket": "user",
+            "why": "Personal working style. Imposing it on teammates through a committed file is not what project scope is for."
+          },
+          {
+            "id": "c1c",
+            "text": "Tests anywhere in the repo must use data factories, never hardcoded fixtures — and tests live in roughly forty directories",
+            "bucket": "rule",
+            "why": "Scoped by file pattern rather than by location, and it costs context only when a test file is actually edited."
+          },
+          {
+            "id": "c1d",
+            "text": "packages/legacy-billing/ still uses callbacks; do not convert it to async/await",
+            "bucket": "dir",
+            "why": "Bounded to a single tree. A glob rule would be indirection for one directory."
+          },
+          {
+            "id": "c1e",
+            "text": "The team's occasional \"map this directory's dependency graph\" workflow",
+            "bucket": "skill",
+            "why": "Run on demand against an argument. Loading it every session would spend context on a workflow that runs monthly."
+          },
+          {
+            "id": "c1f",
+            "text": "Migration files must be reversible — and migrations sit under two different packages",
+            "bucket": "rule",
+            "why": "Two locations, one file pattern. Exactly the case path globs exist for."
+          },
+          {
+            "id": "c1g",
+            "text": "My local Postgres listens on port 5544",
+            "bucket": "user",
+            "why": "A machine-local fact, and wrong on every other machine that clones the repo."
+          },
+          {
+            "id": "c1h",
+            "text": "Architectural decision: all cross-service calls go through the gateway",
+            "bucket": "project",
+            "why": "A standing constraint every contributor has to see, whichever file they open."
+          },
+          {
+            "id": "c1i",
+            "text": "A /release-notes generator the whole team should get on clone",
+            "bucket": "skill",
+            "why": "It is an invoked workflow — and defining it at project scope is what makes it available after a clone."
+          },
+          {
+            "id": "c1j",
+            "text": "React component conventions, where components exist only under src/ui/",
+            "bucket": "dir",
+            "why": "One directory, one file. No reason to reach for pattern matching."
+          },
+          {
+            "id": "c1k",
+            "text": "Onboarding standards, so a new hire's very first session follows the team's testing rules",
+            "bucket": "project",
+            "why": "The classic failure is filing this personally, where the new hire never sees it."
+          }
+        ],
+        "hint": "Ask two questions of each item in turn. Who has to receive it — just you, everyone, or everyone working in one place? And is it a standing constraint or a workflow somebody runs?",
+        "explanation": "Reach settles most of these. Anything a teammate must have on clone is project scope; anything true only of your machine is user scope. Between directory and path-scoped rule, the discriminator is whether the convention follows a location or a file pattern: one tree means directory-level, files scattered across many trees means a glob. Skills are the timing axis — c1e and c1i are both workflows somebody invokes, and the fact that c1i must survive a clone changes where it is defined, not what it is.",
+        "tip": "Two distinct tests, kept separate. \"Would a teammate get this by cloning?\" answers user vs project. \"Loads always vs loads on request\" answers standard vs skill. Collapse them into one and the classification falls apart."
+      },
+      {
+        "id": "classify-always-vs-on-demand",
+        "type": "classify",
+        "title": "Always loaded, or invoked?",
+        "principle": "constrain-dont-add",
+        "prompt": "Same repository, all of it committed. Decide which of these belongs in always-loaded configuration and which earns its context only when somebody asks for it.",
+        "buckets": [
+          {
+            "id": "always",
+            "label": "Always loaded",
+            "blurb": "A memory file or a path-scoped rule"
+          },
+          {
+            "id": "on-demand",
+            "label": "On demand",
+            "blurb": "A skill somebody invokes"
+          }
+        ],
+        "items": [
+          {
+            "id": "naming",
+            "text": "Naming conventions for modules and exports",
+            "bucket": "always",
+            "why": "Relevant to essentially any edit, and nobody would think to invoke it first."
+          },
+          {
+            "id": "release-checklist",
+            "text": "A six-step release checklist run about once a week",
+            "bucket": "on-demand",
+            "why": "Rare, procedural and long. It earns its context on the sessions where it runs, and only those."
+          },
+          {
+            "id": "money-type",
+            "text": "The rule that money values go through the Money type",
+            "bucket": "always",
+            "why": "A standing constraint. A missed invocation here is a bug in production, not an inconvenience."
+          },
+          {
+            "id": "security-review",
+            "text": "Produce a security-review pass over a diff",
+            "bucket": "on-demand",
+            "why": "A task, not a standard."
+          },
+          {
+            "id": "framework-version",
+            "text": "Which framework and version the project targets",
+            "bucket": "always",
+            "why": "Cheap to state, and wrong assumptions here poison everything downstream."
+          },
+          {
+            "id": "arch-report",
+            "text": "Generate an architecture report for a named directory",
+            "bucket": "on-demand",
+            "why": "It takes an argument and produces verbose output — the definition of on-request work."
+          }
+        ],
+        "hint": "For each one, ask what happens on the session where nobody invokes it. If the answer is \"a defect ships\", it cannot be on demand.",
+        "explanation": "Standing constraints go in always-loaded configuration because their whole value is that they hold without anyone remembering them. Workflows go in skills because their cost is real and their relevance is occasional. The size of the content is a hint, not the test: a long standard still has to be always loaded, and a short workflow that takes an argument is still on demand.",
+        "tip": "\"It's long, so make it a skill\" is the wrong instinct and a plausible distractor. Length is a reason to write it more tightly, not a reason to make enforcement optional."
+      },
+      {
+        "id": "quiz-shared-conventions",
+        "type": "quiz",
+        "title": "Drill: where shared conventions belong",
+        "questionId": "cc-001"
+      },
+      {
+        "id": "quiz-user-level-path",
+        "type": "quiz",
+        "title": "Drill: the user-level location",
+        "questionId": "cc-101"
+      },
+      {
+        "id": "quiz-active-sources",
+        "type": "quiz",
+        "title": "Drill: which sources are active for this file",
+        "questionId": "cc-109"
+      },
+      {
+        "id": "quiz-dry-architecture",
+        "type": "quiz",
+        "title": "Drill: common rules without duplication",
+        "questionId": "cc-310"
+      },
+      {
+        "id": "quiz-pattern-activation",
+        "type": "quiz",
+        "title": "Drill: does the rule file activate?",
+        "questionId": "cc-324"
+      }
+    ]
+  },
+  {
+    "id": "cc-planning-sessions-ci",
+    "domain": "cc",
+    "kind": "core",
+    "title": "Planning, Sessions & Headless CI",
+    "outcome": "Decide when investigation earns its round trip, know what a resumed session carries, and wire an automated review loop that stops repeating itself.",
+    "objectives": [
+      "Apply the plan-first criteria without treating planning as a free default",
+      "Judge when resuming a session is cheaper than restating findings in a fresh one",
+      "Delegate discovery so the main session pays for the conclusion, not the search",
+      "Sequence a headless review loop that feeds its previous findings back in"
+    ],
+    "order": 2,
+    "estimatedMinutes": 17,
+    "prerequisites": [
+      "cc-configuration-scope"
+    ],
+    "principles": [
+      "constrain-dont-add",
+      "fix-earliest-layer",
+      "prompts-suggest-systems-enforce"
+    ],
+    "scenarioSets": [
+      "code-gen"
+    ],
+    "references": [
+      "https://code.claude.com/docs/en/cli-reference",
+      "https://code.claude.com/docs/en/github-actions"
+    ],
+    "steps": [
+      {
+        "id": "classify-plan-vs-direct",
+        "type": "classify",
+        "title": "Plan first, or just do it?",
+        "principle": "constrain-dont-add",
+        "prompt": "Eight tasks arrive. Decide which ones earn an investigation-and-approval round trip before any code changes, and which should simply be executed.",
+        "buckets": [
+          {
+            "id": "plan-first",
+            "label": "Plan first",
+            "blurb": "Investigate and get the approach agreed before editing"
+          },
+          {
+            "id": "direct",
+            "label": "Direct execution",
+            "blurb": "The change and its blast radius are already known"
+          }
+        ],
+        "items": [
+          {
+            "id": "null-check",
+            "text": "A stack trace names one missing null check in parser.ts line 88",
+            "bucket": "direct",
+            "why": "The change and its blast radius are both already known."
+          },
+          {
+            "id": "moment-migration",
+            "text": "Migrate the codebase off the moment library — 45 files affected",
+            "bucket": "plan-first",
+            "why": "Scale, plus a genuine decision about which replacement API surface to adopt."
+          },
+          {
+            "id": "tenant-id",
+            "text": "Add a required tenant_id to the request envelope; it is unclear which services read it",
+            "bucket": "plan-first",
+            "why": "The unknown here is the blast radius, and buying that knowledge is exactly what investigation is for."
+          },
+          {
+            "id": "patch-bump",
+            "text": "Bump a patch dependency and refresh the lockfile",
+            "bucket": "direct",
+            "why": "There is no design decision available to be made."
+          },
+          {
+            "id": "split-billing",
+            "text": "Split billing out of the monolith; several defensible service boundaries exist",
+            "bucket": "plan-first",
+            "why": "Multiple viable approaches — agreement on the boundary should come before the code that assumes one."
+          },
+          {
+            "id": "one-more-rule",
+            "text": "Add one more validation rule to a validator you wrote yesterday",
+            "bucket": "direct",
+            "why": "Familiar, single-file, unambiguous."
+          },
+          {
+            "id": "session-storage",
+            "text": "First task in an unfamiliar codebase: change how sessions are stored",
+            "bucket": "plan-first",
+            "why": "You cannot scope the change until you understand the current design."
+          },
+          {
+            "id": "rename-helper",
+            "text": "Rename a private helper used twice in the same file",
+            "bucket": "direct",
+            "why": "Planning here costs a round trip and an approval in exchange for nothing."
+          }
+        ],
+        "hint": "Two triggers, and only two: is the blast radius unknown, or is there more than one defensible approach? Difficulty on its own is neither.",
+        "explanation": "Plan first when the scope is unknown or when a design choice has to be agreed before it gets baked into code. Execute directly when both the change and its reach are already determined. Notice that unfamiliarity counts as unknown scope — the session-storage task is small on paper and still needs investigation, because nobody yet knows what it touches. Notice equally that a 45-file migration and a one-line rename land in different buckets for reasons of scope and choice, not effort.",
+        "tip": "Planning mode is not the safe default. Reaching for it on a one-line fix is the same over-architecting instinct that constrain-dont-add eliminates everywhere else on this exam."
+      },
+      {
+        "id": "teach-delegate-discovery",
+        "type": "teach",
+        "title": "Delegating discovery to protect the session",
+        "principle": "fix-earliest-layer",
+        "body": "The expensive part of most investigations is the reading, and the reading is almost never what you need to keep.\n\nSuppose mapping a dependency graph means opening fifteen files. Do it in the main session and all fifteen files sit in the window for the rest of the work, competing with everything that comes after. What you actually needed was the resulting list.\n\nThe move is to delegate the discovery to a subagent that reads widely in its own window and returns a summary. The main session pays for the conclusion instead of the search. The tokens are still spent — this is not a way to read fifteen files for free — but they are spent somewhere that gets discarded when the answer comes back.\n\nThe discriminator is retention. Delegate when the reading is necessary and the retention is not. When the material has to stay available for the rest of the task, delegation just adds a hop.",
+        "callout": {
+          "kind": "note",
+          "body": "Learn the behaviour, not a product name. Whether the discovery agent is invoked by a built-in command or defined by hand, the architecture is the same: a separate window absorbs the search, and only the conclusion crosses back."
+        },
+        "tip": "Context economics is a full topic in its own right — this is the one paragraph of it that shows up in Claude Code questions. The wider treatment of when to trim, pin, delegate or checkpoint is a separate module.",
+        "references": [
+          "https://code.claude.com/docs/en/sub-agents"
+        ]
+      },
+      {
+        "id": "classify-resume-vs-fresh",
+        "type": "classify",
+        "title": "Resume, or start fresh with a summary?",
+        "principle": "fix-earliest-layer",
+        "prompt": "Each row describes work you want to continue. Decide whether to resume the previous session outright or to start a fresh one carrying a written summary of the findings.",
+        "buckets": [
+          {
+            "id": "resume",
+            "label": "Resume",
+            "blurb": "Pick the session back up as it was"
+          },
+          {
+            "id": "fresh-with-summary",
+            "label": "Fresh + summary",
+            "blurb": "New session; carry the findings in deliberately"
+          }
+        ],
+        "items": [
+          {
+            "id": "twenty-minutes",
+            "text": "Same auth investigation, twenty minutes later, and nothing has touched the tree",
+            "bucket": "resume",
+            "why": "The cached tool results still describe the files as they actually are."
+          },
+          {
+            "id": "colleague-refactor",
+            "text": "Same investigation, but a colleague merged a refactor of that module overnight",
+            "bucket": "fresh-with-summary",
+            "why": "Every cached file read is now a confident description of code that no longer exists."
+          },
+          {
+            "id": "week-old",
+            "text": "A week-old session, two releases later",
+            "bucket": "fresh-with-summary",
+            "why": "Staleness compounds. The findings are worth keeping; the tool output is not."
+          },
+          {
+            "id": "paused-lunch",
+            "text": "Paused over lunch, part-way through tracing a call graph",
+            "bucket": "resume",
+            "why": "Nothing has changed, and re-deriving the graph is pure cost."
+          },
+          {
+            "id": "heavily-compacted",
+            "text": "The prior session ended near the context limit and was heavily compacted",
+            "bucket": "fresh-with-summary",
+            "why": "Resuming inherits the lossy summary. Restating the findings deliberately is strictly better than inheriting somebody else's compression of them."
+          },
+          {
+            "id": "second-approach",
+            "text": "You want to try a second approach while keeping the shared investigation findings",
+            "bucket": "fresh-with-summary",
+            "why": "The concept is branching from shared context, and the portable way to do that is to carry a written summary into a new session rather than to reach for a session-forking command."
+          }
+        ],
+        "hint": "A resumed session brings back the tool results as well as the conclusions. Ask whether those results are still true.",
+        "explanation": "Resuming is cheap and correct while the cached observations still describe reality. The moment the tree has moved underneath them — a merge, a release, enough elapsed time — those observations become confident descriptions of code that is gone, which is worse than having nothing. The compaction row is the subtle one: the session is technically resumable, but what you would resume into is already a lossy summary, so writing your own is better. The branching row is the same reasoning from the other side.",
+        "tip": "The failure mode of a stale resume is not an error message. It is an agent reasoning fluently about a file that was refactored last night."
+      },
+      {
+        "id": "order-ci-review-loop",
+        "type": "order",
+        "title": "The automated review loop",
+        "principle": "prompts-suggest-systems-enforce",
+        "prompt": "A team wants an automated reviewer on every pull request. Put the stages of one run in order.",
+        "items": [
+          {
+            "id": "checkout",
+            "label": "Check out the PR head and produce the diff"
+          },
+          {
+            "id": "headless",
+            "label": "Run headlessly with a machine-readable output format"
+          },
+          {
+            "id": "parse",
+            "label": "Parse the named fields out of the result"
+          },
+          {
+            "id": "post",
+            "label": "Post findings as inline comments keyed to file and line"
+          },
+          {
+            "id": "feedback",
+            "label": "On the next push, pass the previous findings in as input and ask only for new or unresolved items"
+          }
+        ],
+        "correctOrder": [
+          "checkout",
+          "headless",
+          "parse",
+          "post",
+          "feedback"
+        ],
+        "why": {
+          "checkout": "The diff is the input. Nothing downstream has anything to work on until it exists.",
+          "headless": "Non-interactive execution with a structured output format is what makes the result something a script can consume rather than something a human reads.",
+          "parse": "Named fields come out of the structured result. This is the step that a plain-prose output would make impossible.",
+          "post": "Findings become inline comments anchored to a file and a line, which is what puts them where the reviewer already is.",
+          "feedback": "This is not optional polish. Without it the bot re-posts the same twelve comments on every commit, and the team stops reading any of them."
+        },
+        "hint": "Four of these are the obvious pipeline. The fifth is what separates a review bot people keep from one they mute.",
+        "explanation": "The loop is diff, run, parse, post, feed back. Structure has to be requested at the invocation — asking for a machine-readable format after the fact is not available, which is why the headless run and the parse are adjacent and in that order. The final stage is the one candidates drop: an automated reviewer with no memory of its own previous findings treats every push as the first, and the resulting comment spam is why teams disable these bots.",
+        "tip": "Any answer option that describes an automated reviewer without a mechanism for suppressing already-reported findings is describing a system that will be turned off within a week."
+      },
+      {
+        "id": "quiz-plan-or-direct",
+        "type": "quiz",
+        "title": "Drill: plan mode or direct execution",
+        "questionId": "cc-110"
+      },
+      {
+        "id": "quiz-not-plan-mode",
+        "type": "quiz",
+        "title": "Drill: why this task does not warrant a plan",
+        "questionId": "cc-309"
+      },
+      {
+        "id": "quiz-machine-parseable",
+        "type": "quiz",
+        "title": "Drill: making the output machine-parseable",
+        "questionId": "cc-317"
+      },
+      {
+        "id": "quiz-no-carryover",
+        "type": "quiz",
+        "title": "Drill: why the second invocation starts cold",
+        "questionId": "cc-307"
+      },
+      {
+        "id": "quiz-nightly-automation",
+        "type": "quiz",
+        "title": "Drill: assembling a scheduled automated report",
+        "questionId": "cc-202"
+      }
+    ]
+  },
+  {
+    "id": "pe-explicit-criteria-fewshot",
+    "domain": "pe",
+    "kind": "core",
+    "title": "Explicit Criteria & Few-shot",
+    "outcome": "Name the failure before you pick the fix, and know which of criteria, examples, schema, validation or code enforcement actually closes it.",
+    "objectives": [
+      "Identify the defects that make a prompt produce different results on identical input",
+      "Match a specific observed failure to the one intervention that addresses it",
+      "Choose the kind of example that fixes the observed gap, not just more examples",
+      "Pin conventions with normalization rules the schema cannot express",
+      "Decide when to ask a clarifying question rather than proceed on an assumption"
+    ],
+    "order": 1,
+    "estimatedMinutes": 18,
+    "principles": [
+      "match-fix-to-failure",
+      "prompts-suggest-systems-enforce",
+      "constrain-dont-add"
+    ],
+    "scenarioSets": [
+      "doc-extraction",
+      "code-gen"
+    ],
+    "references": [
+      "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/overview"
+    ],
+    "steps": [
+      {
+        "id": "teach-explicit-criteria",
+        "type": "teach",
+        "title": "Undefined rules get reinvented every run",
+        "principle": "match-fix-to-failure",
+        "body": "Here is a prompt that produces different findings on two runs over the same file, and reviewers call about half of them noise.\n\nThe instinct is to reach for a knob — lower the sampling temperature, move to a larger model, ask for JSON. None of those touch the actual defect, and the first two make it worse in a specific way: they make an arbitrary answer stable and tidy.\n\nThe defect is that no rule was ever written down. \"Check them for accuracy\" contains no positive test for what counts as an inaccurate comment, so the model invents one on each run. There is no exclusion list, so stylistic nits and missing comments get reported alongside real findings — that is where most of the noise lives. Severity is requested with no anchors, so the same issue lands high one run and low the next and the field means nothing. And \"be conservative\" hands the reporting threshold to the model's own sense of confidence, which is an unmeasured signal being used as a gate.\n\nThe fix is an include list, an exclude list, and severity levels each anchored by one worked example. Not more adjectives. \"Be very careful and precise\" adds no information, and a larger model buys nothing when the rule itself is undefined.",
+        "code": [
+          {
+            "lang": "text",
+            "caption": "the prompt that produces the variance",
+            "source": "You are reviewing code comments. Check them for accuracy.\nBe conservative — only report findings you are highly confident about.\nRate each finding's severity."
+          }
+        ],
+        "callout": {
+          "kind": "warn",
+          "body": "Setting the temperature to zero is a genuinely plausible distractor here and it is wrong. Ambiguity is producing the spread, not sampling. Tightening sampling on an underspecified rule just makes the arbitrary answer reproducible."
+        },
+        "tip": "Few-shot examples are a real tool and they are not the answer to this one. When the rule itself is missing, criteria come first; examples demonstrate a rule that already exists."
+      },
+      {
+        "id": "classify-match-fix-to-failure",
+        "type": "classify",
+        "title": "Match the fix to the failure",
+        "principle": "match-fix-to-failure",
+        "prompt": "Eight production symptoms. For each, pick the single intervention that actually closes it.",
+        "buckets": [
+          {
+            "id": "criteria",
+            "label": "Explicit criteria",
+            "blurb": "Write the rule down"
+          },
+          {
+            "id": "few-shot",
+            "label": "Few-shot examples",
+            "blurb": "Show two to four worked examples"
+          },
+          {
+            "id": "schema",
+            "label": "Schema design",
+            "blurb": "Define or redesign the tool schema"
+          },
+          {
+            "id": "semantic-validation",
+            "label": "Semantic validation",
+            "blurb": "Check the values after parsing"
+          },
+          {
+            "id": "enforce-in-code",
+            "label": "Enforce in code",
+            "blurb": "A hook or a precondition outside the model"
+          }
+        ],
+        "items": [
+          {
+            "id": "risky-code",
+            "text": "Reviewers disagree with what got flagged; the prompt says \"flag risky code\"",
+            "bucket": "criteria",
+            "why": "The rule was never written down, so there is nothing for the output to be consistent with."
+          },
+          {
+            "id": "total-mismatch",
+            "text": "Valid JSON, but total does not equal the sum of line_items",
+            "bucket": "semantic-validation",
+            "why": "It parses fine. The numbers are the problem, and only a check that reads the parsed values can see it."
+          },
+          {
+            "id": "prose-with-fence",
+            "text": "The response is prose with a JSON block in a fence, and the parser chokes",
+            "bucket": "schema",
+            "why": "Asking for JSON inside prose is the anti-pattern. A tool schema is the mechanism that makes structure the only available output."
+          },
+          {
+            "id": "date-formats",
+            "text": "Dates come back as Jan 3 2025, 03/01/2025 and 2025-01-03 from different sources",
+            "bucket": "few-shot",
+            "why": "A schema can type the field as a string; it cannot pin a convention. Examples, with explicit normalization rules alongside, can."
+          },
+          {
+            "id": "refund-ceiling",
+            "text": "Refunds over $500 went out twice this month despite a prompt saying to escalate them",
+            "bucket": "enforce-in-code",
+            "why": "A rule that must hold every single time is not a prompt's job."
+          },
+          {
+            "id": "three-or-thirty",
+            "text": "Asked to \"be conservative\", the model reports 3 findings one run and 30 the next",
+            "bucket": "criteria",
+            "why": "The threshold is undefined, so it gets re-invented on every run."
+          },
+          {
+            "id": "invented-invoice-number",
+            "text": "The model fills in an invoice_number on scans that do not contain one",
+            "bucket": "schema",
+            "why": "A required field forces a value. Make it nullable and the fabrication stops at its source."
+          },
+          {
+            "id": "unfamiliar-layouts",
+            "text": "Extraction works on familiar receipts but confuses vendor and customer on new layouts",
+            "bucket": "few-shot",
+            "why": "The rule is understood. What needs demonstrating is the mapping from an unfamiliar layout to the fields."
+          }
+        ],
+        "hint": "Say the failure out loud in one sentence before you look at the buckets. \"The rule is missing\", \"the shape is wrong\", \"the values are wrong\", \"the mapping is unclear\", \"it must never happen\" — each of those has exactly one home.",
+        "explanation": "Criteria fix an undefined rule. Few-shot fixes a rule that is understood but whose application to unfamiliar input is not. Schema fixes shape, including the special case where a required field is what forces a fabrication. Semantic validation catches values that are well-formed and wrong. Code enforcement covers the constraints that must hold every time, where a prompt can only ever suggest. Note the pairing at the top and bottom: risky-code and three-or-thirty are the same defect wearing different clothes, and both are criteria rather than examples.",
+        "tip": "Nearly every wrong answer on this exam is a real fix aimed at the wrong failure. Name the failure first, then pick — the distractors are all interventions that would work somewhere else."
+      },
+      {
+        "id": "classify-example-kind",
+        "type": "classify",
+        "title": "Which kind of example fixes this?",
+        "principle": "match-fix-to-failure",
+        "prompt": "You have already decided that examples are the right intervention. Now decide what each example has to demonstrate.",
+        "buckets": [
+          {
+            "id": "routing",
+            "label": "Routing",
+            "blurb": "Ambiguous request to the right tool or path"
+          },
+          {
+            "id": "output-format",
+            "label": "Output format",
+            "blurb": "The shape of the result"
+          },
+          {
+            "id": "positive-negative",
+            "label": "Positive and negative",
+            "blurb": "Acceptable versus flag"
+          },
+          {
+            "id": "cross-format",
+            "label": "Cross-format",
+            "blurb": "Same fact, different document conventions"
+          },
+          {
+            "id": "informal-values",
+            "label": "Informal values",
+            "blurb": "Loose real-world phrasing to a normalized value"
+          }
+        ],
+        "items": [
+          {
+            "id": "order-broken",
+            "text": "\"My order is broken\" sometimes triggers a refund and sometimes a lookup",
+            "bucket": "routing",
+            "why": "The request is genuinely ambiguous. Examples fix the decision, not the vocabulary."
+          },
+          {
+            "id": "key-names",
+            "text": "Finding objects come back with different key names on each run",
+            "bucket": "output-format",
+            "why": "One worked example pins the shape faster than three paragraphs describing it."
+          },
+          {
+            "id": "eq-true",
+            "text": "x == true is flagged in one file and ignored in the next",
+            "bucket": "positive-negative",
+            "why": "The boundary only becomes crisp when both sides of it are shown."
+          },
+          {
+            "id": "citations",
+            "text": "Citations extract cleanly from (Smith, 2023) but fail on numbered bibliographies",
+            "bucket": "cross-format",
+            "why": "Same target field, different source convention. One example per convention."
+          },
+          {
+            "id": "handfuls",
+            "text": "\"Two handfuls of rice\" returns null for the amount",
+            "bucket": "informal-values",
+            "why": "Too diverse to enumerate as rules. Examples generalize where an enumeration cannot."
+          },
+          {
+            "id": "get-manager",
+            "text": "\"Get me a manager\" sometimes gets a troubleshooting attempt first",
+            "bucket": "routing",
+            "why": "An explicit request should short-circuit, and an example is what makes the short-circuit unmistakable."
+          }
+        ],
+        "hint": "Ask what the model is getting wrong: which path to take, what the answer should look like, where the line sits, how to read an unfamiliar source, or how to turn vague human phrasing into a value.",
+        "explanation": "Routing examples resolve which path an ambiguous request takes. Format examples pin a shape. Positive-and-negative pairs draw a boundary, and they only work in pairs — showing only the things to flag leaves the other side of the line undefined. Cross-format examples handle the same target field arriving under different source conventions, so you need one per convention rather than more of the same. Informal-value examples cover phrasing too varied to enumerate.",
+        "tip": "Two to four examples is the working range. An option offering twenty examples is usually signalling that the real problem was undefined criteria, and that somebody is trying to demonstrate a rule into existence."
+      },
+      {
+        "id": "teach-normalization",
+        "type": "teach",
+        "title": "The schema types it; the prompt pins its convention",
+        "principle": "prompts-suggest-systems-enforce",
+        "body": "A schema can say a field is a string. It cannot say which of the many valid strings you meant.\n\nThat gap is where syntactically valid, semantically inconsistent output comes from, and it is why a schema alone does not close an extraction pipeline. The remedy is a short block of normalization rules stated alongside the schema — and the rules have to be specific enough to exclude what you are actually seeing.\n\nDates: ISO 8601, and resolve relative dates such as \"yesterday\" to an absolute date. Saying \"a valid date string\" excludes nothing, because every variant you already observed is one.\n\nCurrency: a numeric amount plus a currency code, so \"five bucks\" becomes an amount of 5 with a currency of USD. Saying \"a currency value\" leaves $5, 5 USD and five dollars all conforming.\n\nPercentages: a decimal fraction, so \"half\" becomes 0.5. Saying \"a number between 0 and 100\" is worse than saying nothing, because now 0.5 and 50 both validate and mean different things.",
+        "code": [
+          {
+            "lang": "text",
+            "caption": "normalization rules stated alongside the schema",
+            "source": "Normalization:\n- Dates: ISO 8601 (YYYY-MM-DD). Resolve relative dates to absolute ones.\n- Currency: numeric amount plus ISO currency code. \"five bucks\" -> 5, USD.\n- Percentages: decimal fraction. \"half\" -> 0.5."
+          }
+        ],
+        "callout": {
+          "kind": "contrast",
+          "body": "\"Type the field as a string\" is the schema's job and the schema is already doing it. A normalization rule that restates the type has added nothing. The test of a good rule is whether it rejects one of the variants you actually observed in production."
+        },
+        "tip": "The percentage rule is the one worth memorising, because the plausible-sounding version is the harmful one. A range that admits both the fraction and the whole number has made two different meanings equally valid."
+      },
+      {
+        "id": "classify-ask-vs-proceed",
+        "type": "classify",
+        "title": "Ask first, or proceed?",
+        "principle": "constrain-dont-add",
+        "prompt": "Six incoming tasks. Decide which ones warrant a clarifying question before any work starts.",
+        "buckets": [
+          {
+            "id": "ask",
+            "label": "Ask first",
+            "blurb": "A missing decision changes the design"
+          },
+          {
+            "id": "proceed",
+            "label": "Proceed",
+            "blurb": "Specified well enough to act on"
+          }
+        ],
+        "items": [
+          {
+            "id": "caching",
+            "text": "Add caching to an endpoint; invalidation strategy and staleness tolerance are unstated",
+            "bucket": "ask",
+            "why": "The choice changes the design, and it is not recoverable from reading the code."
+          },
+          {
+            "id": "index",
+            "text": "Add the database index named in the ticket",
+            "bucket": "proceed",
+            "why": "Fully specified."
+          },
+          {
+            "id": "hipaa",
+            "text": "Implement \"HIPAA-compliant audit logging\" with no retention period given",
+            "bucket": "ask",
+            "why": "An unfamiliar regulated domain where a wrong default is expensive to have shipped."
+          },
+          {
+            "id": "rename",
+            "text": "Rename a variable",
+            "bucket": "proceed",
+            "why": "Asking here is friction with no upside."
+          },
+          {
+            "id": "faster-dashboard",
+            "text": "\"Make the dashboard faster\", with no target and no profile",
+            "bucket": "ask",
+            "why": "No success criterion exists yet, so there is nothing to build against."
+          },
+          {
+            "id": "same-fix",
+            "text": "Apply the same fix as the previous PR to a second file",
+            "bucket": "proceed",
+            "why": "The pattern is already established."
+          }
+        ],
+        "hint": "Ask whether the missing information changes the design or merely the details — and whether a wrong guess would be caught cheaply.",
+        "explanation": "The trigger for asking is a missing decision that changes the shape of the work and cannot be recovered from the code: a caching policy, a retention period, a performance target. Everything else proceeds. The symmetry matters — over-asking is its own failure mode, and a clarifying question on a variable rename is friction that trains people to stop reading the questions.",
+        "tip": "This is constrain-dont-add pointed at process rather than architecture. More gates is not automatically safer; a gate on a fully specified task is pure cost."
+      },
+      {
+        "id": "quiz-extraction-completeness",
+        "type": "quiz",
+        "title": "Drill: making extraction complete and consistent",
+        "questionId": "pe-103"
+      },
+      {
+        "id": "quiz-how-many-examples",
+        "type": "quiz",
+        "title": "Drill: how many examples, and how to decide",
+        "questionId": "pe-105"
+      },
+      {
+        "id": "quiz-fewshot-risk",
+        "type": "quiz",
+        "title": "Drill: the risk hiding in a few-shot set",
+        "questionId": "pe-106"
+      },
+      {
+        "id": "quiz-what-fewshot-fixes",
+        "type": "quiz",
+        "title": "Drill: what few-shot actually solves",
+        "questionId": "pe-321"
+      }
+    ]
+  },
+  {
+    "id": "pe-structured-output-validation",
+    "domain": "pe",
+    "kind": "core",
+    "title": "Structured Output & Validation Loops",
+    "outcome": "Send tool results in the shape the API actually accepts, and build a retry loop that carries information, bounds itself, and fails visibly.",
+    "objectives": [
+      "State the correct message role and content block for returning a tool result",
+      "Separate failures a schema eliminates from failures only validation can catch",
+      "Sequence a validate-and-retry loop, including why the stages do not commute",
+      "Recognise the failures no number of retries can fix"
+    ],
+    "order": 2,
+    "estimatedMinutes": 18,
+    "prerequisites": [
+      "pe-explicit-criteria-fewshot"
+    ],
+    "principles": [
+      "gotcha-message-roles",
+      "match-fix-to-failure",
+      "prompts-suggest-systems-enforce"
+    ],
+    "scenarioSets": [
+      "doc-extraction"
+    ],
+    "references": [
+      "https://platform.claude.com/docs/en/api/messages",
+      "https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview"
+    ],
+    "steps": [
+      {
+        "id": "teach-message-roles",
+        "type": "teach",
+        "title": "There is no tool role",
+        "principle": "gotcha-message-roles",
+        "body": "This is the single most reliable factual trap in the domain, and third-party study material gets it wrong often enough that seeing it stated incorrectly is not evidence of anything.\n\nThe messages array admits two roles: user and assistant. That is the whole list. There is no tool role.\n\nWhen the model asks to call a tool, that request arrives as a tool_use content block inside an assistant message. You return the result as a tool_result content block inside a user message, carrying the tool_use_id that matches the request. The role is explicitly set, and it is set to user — the framing that it \"is not explicitly set\" or \"just appears\" is a second error layered on the first, and it is the more dangerous one, because somebody who fixes the request body while keeping that belief writes the same bug again next week.\n\nWhy user? Because the roles describe who is supplying the turn, not who produced the content. The model produced the tool call; your program produced the result and hands it back. Everything your side supplies is a user turn.\n\nTwo consequences worth holding on to. The assistant turn containing the tool_use block has to be resent in the history and has to immediately precede the result — dropping it is a separate common defect. And there is no top-level parameter for tool results; they travel in the conversation like everything else.",
+        "code": [
+          {
+            "lang": "json",
+            "caption": "returning a tool result — the correct envelope",
+            "source": "{\n  \"model\": \"<model>\",\n  \"messages\": [\n    { \"role\": \"user\", \"content\": \"What's the status of order 4471?\" },\n    { \"role\": \"assistant\", \"content\": [\n      { \"type\": \"tool_use\", \"id\": \"toolu_01A\", \"name\": \"lookup_order\",\n        \"input\": { \"order_id\": \"4471\" } }\n    ]},\n    { \"role\": \"user\", \"content\": [\n      { \"type\": \"tool_result\", \"tool_use_id\": \"toolu_01A\",\n        \"content\": \"{\\\"status\\\":\\\"shipped\\\"}\" }\n    ]}\n  ]\n}"
+          }
+        ],
+        "callout": {
+          "kind": "warn",
+          "body": "The block type and the envelope are two separate things to get right. A request that puts a correctly-formed tool_result block inside a message with role \"tool\" is rejected — the block was never the problem. Changing that role to \"assistant\" is equally wrong for the opposite reason: the model did not produce the result."
+        },
+        "tip": "If an answer option enumerates three roles, it is wrong, and you do not need to read the rest of it. This eliminates a whole option in about two seconds."
+      },
+      {
+        "id": "classify-syntax-vs-semantic",
+        "type": "classify",
+        "title": "Will a schema catch this?",
+        "principle": "match-fix-to-failure",
+        "prompt": "Eight extraction defects. Sort them by whether a well-designed tool schema eliminates the class outright, or whether the output would pass every structural check and still be wrong.",
+        "buckets": [
+          {
+            "id": "syntax",
+            "label": "Structural",
+            "blurb": "A tool schema eliminates this class"
+          },
+          {
+            "id": "semantic",
+            "label": "Semantic",
+            "blurb": "Needs validation, retry with feedback, or self-correction"
+          }
+        ],
+        "items": [
+          {
+            "id": "missing-brace",
+            "text": "The response ends mid-object; a closing brace is missing",
+            "bucket": "syntax",
+            "why": "Structural, and structurally preventable."
+          },
+          {
+            "id": "wrong-date-meaning",
+            "text": "invoice_date holds the delivery date",
+            "bucket": "semantic",
+            "why": "Correct type, correct place, wrong meaning."
+          },
+          {
+            "id": "urgent-enum",
+            "text": "severity came back as \"urgent\", outside the four allowed values",
+            "bucket": "syntax",
+            "why": "An enum constraint rejects it before it ever reaches your code."
+          },
+          {
+            "id": "total-vs-items",
+            "text": "total is 150.00; the line items sum to 145.00",
+            "bucket": "semantic",
+            "why": "Both numbers are well-formed. Only their relationship is wrong."
+          },
+          {
+            "id": "string-quantity",
+            "text": "quantity arrives as \"3\" instead of 3",
+            "bucket": "syntax",
+            "why": "A type constraint's entire job."
+          },
+          {
+            "id": "invented-vendor",
+            "text": "Every field is populated, but vendor_name was invented — the scan has no vendor block",
+            "bucket": "semantic",
+            "why": "And it points upstream: a required field is what forced the invention in the first place."
+          },
+          {
+            "id": "trailing-comma",
+            "text": "A trailing comma before the closing brace",
+            "bucket": "syntax",
+            "why": "Malformed structure, caught at the boundary."
+          },
+          {
+            "id": "reversed-interval",
+            "text": "start_date is later than end_date",
+            "bucket": "semantic",
+            "why": "Two perfectly valid dates, one impossible interval."
+          }
+        ],
+        "hint": "Ask whether a strict parser, knowing nothing about invoices, could reject it.",
+        "explanation": "A schema constrains types, required fields, enum membership and structure — everything a parser can judge without understanding the domain. It cannot judge whether a well-typed value is the right value, whether two well-typed values are consistent with each other, or whether a value was invented. The invented-vendor row is the one that pays twice: it is a semantic failure at read time, and its cause is a schema decision, so the durable fix is to make the field nullable rather than to add a check for fabrication.",
+        "tip": "An option that responds to a semantic failure by \"enforcing a stricter JSON schema\" is the exam's favourite half-fix. It is a real technique deployed against a class of problem it cannot see."
+      },
+      {
+        "id": "order-validate-retry",
+        "type": "order",
+        "title": "The validate-and-retry loop",
+        "principle": "match-fix-to-failure",
+        "prompt": "A document extraction pipeline has to be reliable enough to run unattended. Put the stages in order.",
+        "items": [
+          {
+            "id": "extract",
+            "label": "Extract using a tool schema"
+          },
+          {
+            "id": "validate-structure",
+            "label": "Validate structure — types, required fields, enum membership"
+          },
+          {
+            "id": "validate-semantics",
+            "label": "Validate semantics and business rules — totals reconcile, dates ordered"
+          },
+          {
+            "id": "assemble-retry",
+            "label": "Assemble a retry message with the source, the previous output, and the specific violation"
+          },
+          {
+            "id": "reprompt",
+            "label": "Re-prompt with that message"
+          },
+          {
+            "id": "bound-and-route",
+            "label": "After a bounded number of attempts, stop and route to human review with the failure recorded"
+          }
+        ],
+        "correctOrder": [
+          "extract",
+          "validate-structure",
+          "validate-semantics",
+          "assemble-retry",
+          "reprompt",
+          "bound-and-route"
+        ],
+        "why": {
+          "extract": "The schema is the first line of defence, not an afterthought — it removes the whole structural failure class before any checking begins.",
+          "validate-structure": "Cheap, domain-free checks first. There is no point asking whether the totals reconcile if the object does not parse.",
+          "validate-semantics": "These read typed fields, which is exactly why they cannot run before the structural pass. Running them against structurally invalid output is meaningless, so these two stages do not swap.",
+          "assemble-retry": "The specific violation is the payload. A retry that only says \"that was wrong, try again\" carries no new information and reliably produces a different wrong answer.",
+          "reprompt": "The re-prompt is only as good as the message assembled for it, which is why it comes after the assembly rather than being merged into it.",
+          "bound-and-route": "Without a bound, a document that cannot be extracted correctly loops until something hallucinated happens to pass validation — the worst possible outcome, because it exits the loop looking like a success."
+        },
+        "hint": "One pair of these looks interchangeable and is not. Ask what each validation stage needs to read before it can run.",
+        "explanation": "Schema, structure, semantics, assemble, re-prompt, bound. None of these stages commute. The structural and semantic passes are the pair candidates want to swap, and they cannot: semantic rules operate on typed fields, so they presuppose the structural pass has already succeeded. The last stage is the one that distinguishes a reliable pipeline from a dangerous one — an unbounded retry loop does not fail loudly, it eventually produces a plausible fabrication and reports success.",
+        "tip": "Watch for options where the retry is unbounded, or where the retry message contains only a generic error. Both describe loops that terminate on a hallucination rather than on a correct answer."
+      },
+      {
+        "id": "classify-retry-helps",
+        "type": "classify",
+        "title": "Will a retry help?",
+        "principle": "match-fix-to-failure",
+        "prompt": "Validation has just failed. For each case, decide whether re-prompting with the specific violation can recover it, or whether the loop is about to waste attempts on something unrecoverable.",
+        "buckets": [
+          {
+            "id": "retry-helps",
+            "label": "Retry helps",
+            "blurb": "The information is present; the output is wrong"
+          },
+          {
+            "id": "retry-cannot-help",
+            "label": "Retry cannot help",
+            "blurb": "The information is not there to be found"
+          }
+        ],
+        "items": [
+          {
+            "id": "date-format",
+            "text": "The date came back as 03/04/2025 when ISO was required",
+            "bucket": "retry-helps",
+            "why": "A format error. The information is present and the violation is nameable."
+          },
+          {
+            "id": "absent-po",
+            "text": "The PO number is genuinely absent from the scan",
+            "bucket": "retry-cannot-help",
+            "why": "Make the field nullable. Looping only pressures the model to invent one."
+          },
+          {
+            "id": "reconcilable-total",
+            "text": "Line items sum to 145, the printed total says 150 — both are on the page",
+            "bucket": "retry-helps",
+            "why": "The model can re-read and reconcile, because everything it needs is in front of it."
+          },
+          {
+            "id": "missing-exhibit",
+            "text": "Payment terms live in an exhibit that was never sent",
+            "bucket": "retry-cannot-help",
+            "why": "The context is external. No amount of re-prompting imports it."
+          },
+          {
+            "id": "wrong-parent",
+            "text": "A field landed under the wrong parent object",
+            "bucket": "retry-helps",
+            "why": "Structural, and the violation can be stated precisely enough to act on."
+          },
+          {
+            "id": "blurry-scan",
+            "text": "The photographed invoice is too blurry to read the amount",
+            "bucket": "retry-cannot-help",
+            "why": "Not recoverable from the input you have."
+          }
+        ],
+        "hint": "One question: is the correct answer present in the input the model was given?",
+        "explanation": "Retries recover errors of expression — wrong format, wrong placement, a reconciliation the model did not perform. They cannot recover missing information, and pointing a retry loop at absent data is worse than useless: it applies escalating pressure to produce a value, which is precisely how fabrications get generated. The two unrecoverable rows have different remedies — a nullable field for the genuinely absent value, and a fix upstream in what gets sent for the missing exhibit — but they share the same signal at the loop.",
+        "tip": "Repeated retries on absent data is a fabrication generator, not a reliability mechanism. If the field is often missing, the schema is what needs changing."
+      },
+      {
+        "id": "quiz-tool-result-role",
+        "type": "quiz",
+        "title": "Drill: sending the tool result",
+        "questionId": "pe-006"
+      },
+      {
+        "id": "quiz-schema-vs-fabrication",
+        "type": "quiz",
+        "title": "Drill: schema changes that stop fabrication",
+        "questionId": "pe-108"
+      },
+      {
+        "id": "quiz-loop-architecture",
+        "type": "quiz",
+        "title": "Drill: the full retry architecture",
+        "questionId": "pe-111"
+      },
+      {
+        "id": "quiz-final-attempt",
+        "type": "quiz",
+        "title": "Drill: when the last attempt still fails",
+        "questionId": "pe-112"
+      },
+      {
+        "id": "quiz-useful-error",
+        "type": "quiz",
+        "title": "Drill: what makes error feedback actionable",
+        "questionId": "pe-309"
+      }
+    ]
+  },
+  {
+    "id": "pe-batch-throughput",
+    "domain": "pe",
+    "kind": "core",
+    "title": "Batch & Throughput Strategy",
+    "outcome": "Decide when asynchronous batch processing is available to you, and plan a submission that still makes the deadline after a failure.",
+    "objectives": [
+      "Identify the latency commitment that disqualifies batch processing",
+      "Recover a partially failed batch without paying for the successes twice",
+      "Do the deadline arithmetic against the worst case rather than the typical one"
+    ],
+    "order": 3,
+    "estimatedMinutes": 12,
+    "prerequisites": [
+      "pe-structured-output-validation"
+    ],
+    "principles": [
+      "constrain-dont-add",
+      "match-fix-to-failure"
+    ],
+    "scenarioSets": [
+      "doc-extraction"
+    ],
+    "references": [
+      "https://platform.claude.com/docs/en/build-with-claude/batch-processing"
+    ],
+    "steps": [
+      {
+        "id": "classify-batch-vs-sync",
+        "type": "classify",
+        "title": "Batch or synchronous?",
+        "principle": "constrain-dont-add",
+        "prompt": "Eight workloads. Decide which can go through an asynchronous batch and which cannot.",
+        "buckets": [
+          {
+            "id": "batch",
+            "label": "Batch",
+            "blurb": "Nobody is waiting on any individual result"
+          },
+          {
+            "id": "synchronous",
+            "label": "Synchronous",
+            "blurb": "A latency commitment or a feedback loop rules batch out"
+          }
+        ],
+        "items": [
+          {
+            "id": "pre-merge-check",
+            "text": "A pre-merge security check while the developer watches CI",
+            "bucket": "synchronous",
+            "why": "Someone is blocked. A twenty-four hour window is not a latency profile, it is an outage."
+          },
+          {
+            "id": "forty-thousand-tickets",
+            "text": "Reclassify 40,000 archived support tickets",
+            "bucket": "batch",
+            "why": "No one is waiting, and the volume makes the discount material."
+          },
+          {
+            "id": "nightly-report",
+            "text": "A nightly tech-debt report read at standup",
+            "bucket": "batch",
+            "why": "The deadline is a morning, not a moment."
+          },
+          {
+            "id": "live-chat",
+            "text": "A chat agent answering a live customer",
+            "bucket": "synchronous",
+            "why": "The hardest possible latency commitment — a person is reading the reply as it arrives."
+          },
+          {
+            "id": "weekly-audit",
+            "text": "A weekly dependency audit emailed on Monday",
+            "bucket": "batch",
+            "why": "Scheduled, unattended, and nothing downstream blocks on an individual result."
+          },
+          {
+            "id": "twelve-thousand-docs",
+            "text": "Regenerate summaries for a 12,000-document corpus, launching in six days",
+            "bucket": "batch",
+            "why": "Ample slack against the window, and large volume."
+          },
+          {
+            "id": "agent-loop",
+            "text": "An agent that calls a tool, reads the result, and decides the next call",
+            "bucket": "synchronous",
+            "why": "A batch job is one request producing one response. There is no way to feed a tool result back into the same job mid-flight."
+          },
+          {
+            "id": "six-hour-deadline",
+            "text": "3,000 documents needed within six hours",
+            "bucket": "synchronous",
+            "why": "The window can consume up to twenty-four hours and carries no latency guarantee, so six hours of headroom is not a plan."
+          }
+        ],
+        "hint": "Batch is disqualified by exactly two things: a latency commitment, and a loop that has to read its own output. Volume never disqualifies it.",
+        "explanation": "Batch suits high-volume work where no individual result is blocking anything and the deadline is measured in hours or days. Two things rule it out. A latency commitment — someone waiting, CI blocked, a deadline inside the window — and an agentic loop, which needs to read each result before deciding the next call and therefore cannot be expressed as one request producing one response. The agent-loop row is the structural one and it is worth internalising: it is not a matter of degree.",
+        "tip": "\"Fifty per cent cheaper\" makes batch look like the default and the discount is real. The disqualifier is always a latency commitment — and \"we'd like it soon\" is not one, while \"CI blocks on it\" is."
+      },
+      {
+        "id": "order-recover-partial-batch",
+        "type": "order",
+        "title": "Recovering a partially failed batch",
+        "principle": "match-fix-to-failure",
+        "prompt": "A batch of a hundred documents comes back with five failures. Order the recovery.",
+        "items": [
+          {
+            "id": "submit",
+            "label": "Submit the batch"
+          },
+          {
+            "id": "retrieve",
+            "label": "Retrieve the results when the batch completes"
+          },
+          {
+            "id": "partition",
+            "label": "Partition succeeded from failed by custom id"
+          },
+          {
+            "id": "diagnose",
+            "label": "Diagnose the shared cause of the failures"
+          },
+          {
+            "id": "change-strategy",
+            "label": "Change the strategy for those inputs — chunk the oversized documents, say"
+          },
+          {
+            "id": "resubmit",
+            "label": "Resubmit only the failed ids"
+          },
+          {
+            "id": "merge",
+            "label": "Merge the second pass into the first pass's results"
+          }
+        ],
+        "correctOrder": [
+          "submit",
+          "retrieve",
+          "partition",
+          "diagnose",
+          "change-strategy",
+          "resubmit",
+          "merge"
+        ],
+        "why": {
+          "submit": "The starting point — a batch that has already run and come back mixed.",
+          "retrieve": "Results are collected as a set when the batch completes, not streamed as they finish.",
+          "partition": "Splitting by the per-entry id is what makes the rest of the recovery possible. You cannot diagnose a set you have not isolated.",
+          "diagnose": "Find the shared cause. Five failures with one explanation is the common case, and resubmitting without an explanation just reproduces them.",
+          "change-strategy": "The whole point of diagnosing. Resubmitting unchanged inputs to the same pipeline produces the same failures at the same cost.",
+          "resubmit": "Only the failed ids. Resubmitting the whole batch pays twice and re-risks the ninety-five that already worked.",
+          "merge": "The first pass's successes plus the second pass's results are the deliverable — the first pass is never discarded."
+        },
+        "hint": "Two steps in the middle look interchangeable. Ask which one produces the input the other needs.",
+        "explanation": "Retrieve, partition, diagnose, change, resubmit the failures only, merge. The partition and the diagnosis are tightly coupled but not interchangeable — a shared cause can only be found across an isolated failure set. The two teaching points are the resubmission scope and the merge: resubmitting everything pays for the successful ninety-five a second time and exposes them to fresh failure, and the recovery is not complete until both passes are combined.",
+        "tip": "Per-entry ids are what make partial recovery possible at all. Any batch design that cannot map a result back to its input has no recovery story."
+      },
+      {
+        "id": "classify-deadline-arithmetic",
+        "type": "classify",
+        "title": "Does this submission plan make the deadline?",
+        "principle": "constrain-dont-add",
+        "prompt": "The batch window can consume up to twenty-four hours and carries no latency guarantee, so plan against the worst case. Which of these plans hold?",
+        "buckets": [
+          {
+            "id": "makes-it",
+            "label": "Makes it",
+            "blurb": "The arithmetic holds against a 24-hour worst case"
+          },
+          {
+            "id": "misses-it",
+            "label": "Misses it",
+            "blurb": "The worst case blows the deadline"
+          }
+        ],
+        "items": [
+          {
+            "id": "thirty-now",
+            "text": "Deadline in 30 hours, submit now",
+            "bucket": "makes-it",
+            "why": "Six hours of slack against the twenty-four hour worst case."
+          },
+          {
+            "id": "thirty-in-eight",
+            "text": "Deadline in 30 hours, submit in 8 hours",
+            "bucket": "misses-it",
+            "why": "Twenty-two hours remaining against a twenty-four hour worst case."
+          },
+          {
+            "id": "twenty-batch-only",
+            "text": "Deadline in 20 hours, batch only",
+            "bucket": "misses-it",
+            "why": "The window alone can exceed the deadline, so no submission time saves it."
+          },
+          {
+            "id": "thirty-in-five",
+            "text": "Deadline in 30 hours, submit in 5 hours",
+            "bucket": "makes-it",
+            "why": "Exactly twenty-five hours of the thirty consumed. Tight, but the arithmetic holds."
+          },
+          {
+            "id": "four-tranches",
+            "text": "Deadline in 48 hours, four submissions at hours 0, 4, 8 and 12",
+            "bucket": "makes-it",
+            "why": "Every tranche clears with margin, and the early tranches surface problems while there is still time to react."
+          },
+          {
+            "id": "recovery-unbudgeted",
+            "text": "Deadline in 30 hours, submit now, and plan to re-run any failures afterwards",
+            "bucket": "misses-it",
+            "why": "The recovery pass needs its own window. One twenty-four hour batch leaves six hours, and six hours is not another batch."
+          }
+        ],
+        "hint": "Add the worst-case window to the submission time. Then ask whether the plan mentions a second pass.",
+        "explanation": "The arithmetic is submission time plus twenty-four hours against the deadline, and the typical completion time never enters it — a window with no latency guarantee has to be planned at its stated maximum. The last row is the one candidates miss, and it is the most realistic plan on the list: it does the first-pass arithmetic correctly and forgets that the failure recovery it explicitly promises needs a second window.",
+        "tip": "If your plan includes a failure-recovery pass, budget two windows rather than one. The tranche row shows the alternative — submitting early and in pieces buys you the reaction time that a single large submission does not."
+      },
+      {
+        "id": "quiz-partial-failure",
+        "type": "quiz",
+        "title": "Drill: handling a partial batch failure",
+        "questionId": "pe-308"
+      },
+      {
+        "id": "quiz-throughput-architecture",
+        "type": "quiz",
+        "title": "Drill: optimising cost and operational complexity",
+        "questionId": "pe-316"
+      }
+    ]
+  },
+  {
+    "id": "ctx-context-economics",
+    "domain": "ctx",
+    "kind": "core",
+    "title": "Context Economics",
+    "outcome": "Diagnose which kind of context pressure you actually have, and apply the one technique that attacks it rather than the one you reach for by habit.",
+    "objectives": [
+      "Distinguish repeated tool output, one-shot bulk reading, summarization loss, session boundaries and crashes as separate problems",
+      "Select the technique that matches the observed symptom",
+      "Assemble a handoff that survives position effects",
+      "Decide what must be restated verbatim and what is safe to summarize"
+    ],
+    "order": 1,
+    "estimatedMinutes": 17,
+    "principles": [
+      "constrain-dont-add",
+      "elim-critical-in-middle",
+      "match-fix-to-failure"
+    ],
+    "scenarioSets": [
+      "multi-agent-research",
+      "support-agent"
+    ],
+    "references": [
+      "https://platform.claude.com/docs/en/build-with-claude/context-windows"
+    ],
+    "steps": [
+      {
+        "id": "teach-context-budget",
+        "type": "teach",
+        "title": "Five problems that all look like \"running out of context\"",
+        "principle": "constrain-dont-add",
+        "body": "Every long-running agent eventually reports the same symptom — it is losing track — and the symptom is uninformative. Underneath it are at least five distinct problems with five distinct remedies, and the remedies are not interchangeable.\n\nRepeated tool output is waste that arrives in instalments. A lookup returns forty fields and five get used, and it does that on every call. The fix is at the boundary: trim the response before it enters the window.\n\nOne-shot bulk reading is different in kind. Fifteen files get read once to answer one question, and then sit there. Trimming does not apply — nothing is repeating. The fix is isolation: spend the tokens in a separate window and return only the conclusion.\n\nSummarization loss is what compaction does to exact values. The refund was $89.99 and after compaction the agent calls it \"about ninety dollars\". No amount of trimming or delegation helps, because the number was in the window and got compressed. The fix is a short pinned block re-injected verbatim, which is never summarized.\n\nSession boundaries are a durability problem. A three-hour investigation across fifteen files has to resume tomorrow, and the findings need to outlive the window entirely. The fix is a scratchpad the agent re-reads instead of re-deriving.\n\nCrashes are a resumability problem. Four of six agents finished and the pipeline died. That is a data-format question — machine-readable progress a restart can pick up — not a prompting question at all.\n\nA sixth pressure runs across all of them: position. What sits in the middle of a long window is recalled least reliably, so where something goes is part of whether it survives.",
+        "callout": {
+          "kind": "note",
+          "body": "Naming the pressure before naming the technique is the whole skill here. \"The agent is running out of context\" is a symptom shared by five different diseases, and four of the five remedies will look reasonable in an answer list every time."
+        },
+        "tip": "Distractors in this domain are almost always a correct technique aimed at the wrong pressure. Trimming a one-shot bulk read and delegating a repeated tool response are both real interventions that will not move the number."
+      },
+      {
+        "id": "classify-technique-for-symptom",
+        "type": "classify",
+        "title": "Which technique for which symptom?",
+        "principle": "match-fix-to-failure",
+        "prompt": "Eight observations from production systems. Pick the technique that attacks the actual pressure in each.",
+        "buckets": [
+          {
+            "id": "facts-block",
+            "label": "Pinned facts block",
+            "blurb": "A short structured block re-injected verbatim into every prompt"
+          },
+          {
+            "id": "trim",
+            "label": "Trim at the tool boundary",
+            "blurb": "Drop unused fields before they enter the window"
+          },
+          {
+            "id": "position",
+            "label": "Position-aware placement",
+            "blurb": "Put what must be recalled at the start and the end"
+          },
+          {
+            "id": "scratchpad",
+            "label": "Scratchpad file",
+            "blurb": "Durable findings the agent re-reads instead of re-deriving"
+          },
+          {
+            "id": "subagent",
+            "label": "Subagent isolation",
+            "blurb": "Spend the tokens in a separate window, return the conclusion"
+          },
+          {
+            "id": "state-file",
+            "label": "Structured state file",
+            "blurb": "Machine-readable progress a restart can resume from"
+          }
+        ],
+        "items": [
+          {
+            "id": "about-ninety",
+            "text": "After compaction the agent calls the refund \"about ninety dollars\" — it was $89.99",
+            "bucket": "facts-block",
+            "why": "Summarization degrades exact values, and a pinned block is the one thing that is not summarized."
+          },
+          {
+            "id": "forty-fields",
+            "text": "Every lookup_order call adds forty fields, of which five are used",
+            "bucket": "trim",
+            "why": "The cheapest possible intervention, applied at the boundary where the waste enters."
+          },
+          {
+            "id": "page-fourteen",
+            "text": "A thirty-page synthesis whose one blocking risk sits on page 14 and never appears in the summary",
+            "bucket": "position",
+            "why": "Classic lost-in-the-middle. Nothing is missing; it is simply in the worst possible place."
+          },
+          {
+            "id": "three-hours",
+            "text": "A three-hour investigation across fifteen files that has to resume tomorrow",
+            "bucket": "scratchpad",
+            "why": "The findings have to outlive the session, and re-running the discovery costs the same three hours again."
+          },
+          {
+            "id": "dep-graph",
+            "text": "Mapping the dependency graph would pull fifteen files into the coordinator's window; the coordinator needs only the resulting list",
+            "bucket": "subagent",
+            "why": "The reading is necessary and the retention is not."
+          },
+          {
+            "id": "crashed-pipeline",
+            "text": "The research pipeline crashed after four of six agents finished",
+            "bucket": "state-file",
+            "why": "Resumability is a data-format problem, not a prompting one."
+          },
+          {
+            "id": "rederived-id",
+            "text": "Two agents keep re-deriving the same customer id from the conversation history",
+            "bucket": "facts-block",
+            "why": "Derive it once, state it, and stop paying for it on every turn."
+          },
+          {
+            "id": "sixty-percent",
+            "text": "The agent has spent 60% of the window reading files it will never need again after extracting three facts",
+            "bucket": "subagent",
+            "why": "The discriminator against trimming: nothing here is a repeated tool response, it is one-shot bulk reading."
+          }
+        ],
+        "hint": "For each one, ask where the tokens came from. A tool response that repeats, a bulk read that happens once, a compaction pass, a session ending, or a process dying — each has exactly one owner.",
+        "explanation": "These are not interchangeable. Trimming attacks repeated tool output; subagent isolation attacks one-shot bulk reading; a pinned facts block attacks summarization loss; a scratchpad attacks session boundaries; a state file attacks crashes; position-aware placement attacks recall within a single long window. The two pairs are the test: forty-fields and sixty-percent both look like \"too many tokens from reading\" and take different remedies, while about-ninety and rederived-id look unrelated and take the same one.",
+        "tip": "Trim versus delegate is the pair that decides this question. Repeating tool response means trim. One-shot bulk read means delegate. Getting that backwards is the most common wrong answer in the domain."
+      },
+      {
+        "id": "order-position-aware-handoff",
+        "type": "order",
+        "title": "Assembling a handoff that survives position effects",
+        "principle": "elim-critical-in-middle",
+        "prompt": "You are writing the handoff document that the next agent will act on. Order the sections so the things that must be recalled are where recall is best.",
+        "items": [
+          {
+            "id": "verdict",
+            "label": "Headline verdict"
+          },
+          {
+            "id": "values",
+            "label": "Exact values and identifiers"
+          },
+          {
+            "id": "evidence",
+            "label": "Supporting per-file evidence"
+          },
+          {
+            "id": "questions",
+            "label": "Open questions"
+          },
+          {
+            "id": "actions",
+            "label": "Action items with owner and deadline"
+          }
+        ],
+        "correctOrder": [
+          "verdict",
+          "values",
+          "evidence",
+          "questions",
+          "actions"
+        ],
+        "acceptableOrders": [
+          [
+            "verdict",
+            "values",
+            "evidence",
+            "actions",
+            "questions"
+          ]
+        ],
+        "why": {
+          "verdict": "The conclusion goes first because the opening is the highest-recall position and because a reader who gets nothing else still gets the answer.",
+          "values": "Exact amounts, dates and identifiers ride immediately behind the verdict — they are what degrades first under any later compression, so they claim the second-best position.",
+          "evidence": "The bulk material goes in the middle. This is deliberate: it is the section you can afford to lose, and something has to occupy the low-recall region.",
+          "questions": "Back into the high-recall tail. Interchangeable with the action items — both belong at the end, and neither ordering is better.",
+          "actions": "The tail is the second-best position in the document, and action items are what the next agent has to leave with."
+        },
+        "hint": "Decide first which single section you could most afford to have forgotten. That one goes in the middle.",
+        "explanation": "Recall is strongest at the start and the end of a long context and weakest through the middle, so the ordering decision is really an allocation decision: what earns a high-recall position, and what can be sacrificed to the middle. The verdict and the exact values earn the opening. Open questions and action items share the tail and genuinely commute — either order is correct. The evidence block is the one thing that must be neither first nor last, which is the opposite of how most people write a report.",
+        "tip": "The instinct to build up to a conclusion is a writing convention borrowed from human readers, and it puts the conclusion in the worst position. Lead with the verdict."
+      },
+      {
+        "id": "classify-survives-compaction",
+        "type": "classify",
+        "title": "What has to survive compaction verbatim?",
+        "principle": "elim-critical-in-middle",
+        "prompt": "A long support session is about to be compacted. Decide what must be restated exactly, every prompt, and what can safely be summarized.",
+        "buckets": [
+          {
+            "id": "pin-verbatim",
+            "label": "Pin verbatim",
+            "blurb": "Restate exactly, in every prompt"
+          },
+          {
+            "id": "safe-to-summarize",
+            "label": "Safe to summarize",
+            "blurb": "The gist carries the value"
+          }
+        ],
+        "items": [
+          {
+            "id": "refund-amount",
+            "text": "The refund amount, $89.99",
+            "bucket": "pin-verbatim",
+            "why": "Money degrades to \"about ninety\", and the approximation is unusable for a decision."
+          },
+          {
+            "id": "order-date",
+            "text": "The order date, 2025-01-15",
+            "bucket": "pin-verbatim",
+            "why": "Dates decay to \"in January\", which changes which policies apply."
+          },
+          {
+            "id": "customer-narrative",
+            "text": "The customer's narrative of what went wrong",
+            "bucket": "safe-to-summarize",
+            "why": "The gist is what matters. The wording is not load-bearing."
+          },
+          {
+            "id": "migration-id",
+            "text": "Migration #47 and its date",
+            "bucket": "pin-verbatim",
+            "why": "An identifier has to be exact to be actionable at all."
+          },
+          {
+            "id": "earlier-reasoning",
+            "text": "Three paragraphs of the model's earlier reasoning",
+            "bucket": "safe-to-summarize",
+            "why": "The conclusion is what carries forward; the derivation has already done its job."
+          },
+          {
+            "id": "approval-threshold",
+            "text": "The $500 approval threshold",
+            "bucket": "pin-verbatim",
+            "why": "A policy boundary. \"A few hundred dollars\" is not a threshold, and an agent cannot apply it."
+          },
+          {
+            "id": "greeting",
+            "text": "The opening greeting",
+            "bucket": "safe-to-summarize",
+            "why": "It carries no decision-relevant content at all."
+          }
+        ],
+        "hint": "Ask what a plausible-sounding paraphrase would do to each item. If the paraphrase is still usable, it can be summarized.",
+        "explanation": "Anything a decision keys on directly — an amount, a date, an identifier, a policy threshold — has to survive as itself, because the natural output of summarization is a fluent approximation that no longer supports the decision. Narrative, reasoning and pleasantries compress without loss of decision value. The threshold is the item most often misfiled: it feels like background policy rather than case data, and it is exactly the thing an approximation destroys.",
+        "tip": "Keep the pinned block short. Its whole value is that it is small enough to restate every turn, and a block that grows into a second transcript will itself get compacted."
+      },
+      {
+        "id": "quiz-lost-in-middle",
+        "type": "quiz",
+        "title": "Drill: why the middle gets lost",
+        "questionId": "ctx-101"
+      },
+      {
+        "id": "quiz-summarization-loss",
+        "type": "quiz",
+        "title": "Drill: what progressive summarization drops",
+        "questionId": "ctx-103"
+      },
+      {
+        "id": "quiz-window-exhaustion",
+        "type": "quiz",
+        "title": "Drill: where the window actually goes",
+        "questionId": "ctx-304"
+      },
+      {
+        "id": "quiz-explore-or-delegate",
+        "type": "quiz",
+        "title": "Drill: explore directly or delegate",
+        "questionId": "ctx-310"
+      },
+      {
+        "id": "quiz-scratchpad-purpose",
+        "type": "quiz",
+        "title": "Drill: what a scratchpad is for",
+        "questionId": "ctx-311"
+      }
+    ]
+  },
+  {
+    "id": "ctx-escalation-provenance",
+    "domain": "ctx",
+    "kind": "core",
+    "title": "Escalation, Provenance & Measurement",
+    "outcome": "Trigger escalation on observable policy conditions rather than on mood or self-assessment, and demand evidence segmented the way the decision is.",
+    "objectives": [
+      "Separate policy triggers, resolvable cases, ambiguity and non-triggers",
+      "Tell a calibrated extraction score apart from a model's self-report",
+      "Judge whether a measurement is segmented enough to justify reducing human review",
+      "Handle a frustrated customer without letting affect become a trigger"
+    ],
+    "order": 2,
+    "estimatedMinutes": 18,
+    "prerequisites": [
+      "ctx-context-economics"
+    ],
+    "principles": [
+      "escalate-on-policy-not-vibes",
+      "elim-sentiment-escalation",
+      "elim-aggregate-accuracy"
+    ],
+    "scenarioSets": [
+      "support-agent",
+      "doc-extraction"
+    ],
+    "references": [
+      "https://platform.claude.com/docs/en/test-and-evaluate/develop-tests"
+    ],
+    "steps": [
+      {
+        "id": "classify-escalation-triggers",
+        "type": "classify",
+        "title": "What should actually trigger escalation?",
+        "principle": "escalate-on-policy-not-vibes",
+        "prompt": "Eleven signals arrive at a support agent. Decide what each one should cause.",
+        "buckets": [
+          {
+            "id": "escalate-now",
+            "label": "Escalate now",
+            "blurb": "A policy condition has been met"
+          },
+          {
+            "id": "resolve-first",
+            "label": "Resolve first",
+            "blurb": "A documented remedy exists and applies"
+          },
+          {
+            "id": "disambiguate",
+            "label": "Ask for more information",
+            "blurb": "Neither guess nor escalate — the customer can settle it"
+          },
+          {
+            "id": "never-a-trigger",
+            "label": "Never a trigger",
+            "blurb": "This signal must not drive escalation at all"
+          }
+        ],
+        "items": [
+          {
+            "id": "get-manager",
+            "text": "\"Get me a manager.\"",
+            "bucket": "escalate-now",
+            "why": "An explicit request for a human. Attempting a fix first is the wrong move here, however well-intentioned."
+          },
+          {
+            "id": "price-match",
+            "text": "Asks for a competitor price match; policy covers only your own site",
+            "bucket": "escalate-now",
+            "why": "A policy gap. The agent has no rule to apply, so inventing one is the failure mode."
+          },
+          {
+            "id": "over-ceiling",
+            "text": "A $1,200 refund where the agent's ceiling is $500",
+            "bucket": "escalate-now",
+            "why": "An observable threshold has been crossed — and the ceiling itself belongs in a hook, not in prompt wording."
+          },
+          {
+            "id": "three-matches",
+            "text": "Three customers match the surname and partial address given",
+            "bucket": "disambiguate",
+            "why": "Ask for another identifier. Guessing acts on the wrong account; escalating spends a human on a question the customer can answer in one line."
+          },
+          {
+            "id": "damaged-item",
+            "text": "Item arrived damaged two days after purchase; warranty replacement is available",
+            "bucket": "resolve-first",
+            "why": "There is a documented remedy and the agent can apply it."
+          },
+          {
+            "id": "sentiment-score",
+            "text": "A sentiment model scores the message at −0.85",
+            "bucket": "never-a-trigger",
+            "why": "Mood does not predict case complexity."
+          },
+          {
+            "id": "self-rated-confidence",
+            "text": "The model reports it is 4 out of 10 confident it handled the case",
+            "bucket": "never-a-trigger",
+            "why": "Uncalibrated self-assessment. The model can be confidently wrong in both directions."
+          },
+          {
+            "id": "all-caps",
+            "text": "The customer has written in all caps",
+            "bucket": "never-a-trigger",
+            "why": "The same category as sentiment, wearing a cheaper disguise."
+          },
+          {
+            "id": "remedies-exhausted",
+            "text": "Three documented remedies have been tried and none apply",
+            "bucket": "escalate-now",
+            "why": "Inability to progress is a policy trigger, and it is observable rather than inferred."
+          },
+          {
+            "id": "train-classifier",
+            "text": "A proposal to train a classifier that predicts which chats need a human",
+            "bucket": "never-a-trigger",
+            "why": "It needs labeled data you do not have, and it replaces a rule set you could simply write down."
+          },
+          {
+            "id": "faq-question",
+            "text": "Asks something the FAQ answers",
+            "bucket": "resolve-first",
+            "why": "A documented answer exists and applying it is the whole job."
+          }
+        ],
+        "hint": "For each signal, ask whether it is something you could write into a rule and check, or something you are inferring about a person's state.",
+        "explanation": "Escalation triggers are observable policy conditions: an explicit request for a human, a gap where no rule applies, a threshold crossed, remedies exhausted. Everything about how the customer sounds is a non-trigger — sentiment scores, capital letters, and the model's own confidence rating are all inferences dressed as measurements. The disambiguate bucket exists because escalation and guessing are not the only two options, and treating ambiguity as an escalation trigger burns human time on questions the customer would happily answer. The classifier proposal is the trap for architects specifically: it sounds like engineering rigour and is a machine-learning project standing in for a list of rules.",
+        "tip": "Any answer option where escalation keys on how upset somebody seems is eliminable without reading the rest of it. This single rule retires a distractor in most escalation questions on the exam."
+      },
+      {
+        "id": "teach-confidence-two-senses",
+        "type": "teach",
+        "title": "Two things called confidence",
+        "principle": "escalate-on-policy-not-vibes",
+        "body": "The exam treats confidence as correct in one setting and disqualifying in another, and the difference is not the word.\n\nThe first sense is a calibrated extraction score. A structured-extraction system emits a confidence value per field. Thresholds are set by running the system against a labeled validation set and observing where accuracy actually falls off. Fields below the threshold route to human review. Accuracy is reported segmented by document type and by field, and a sample of the automated decisions keeps getting audited. Every number in that description was checked against ground truth by somebody.\n\nThe second sense is a model's self-report. An agent, mid-conversation, produces a number for how confident it is that it handled the case — or simply says it is not sure — and the system escalates on it. Nothing has been measured. The number comes from the same process whose reliability it claims to be assessing, and a model can be confidently wrong in both directions.\n\nThe discriminator: is there a labeled set that gave the number a meaning, and does anyone re-measure it? If not, it is a vibe with a decimal point. Note in particular that per-field shape is not calibration — an uncalibrated per-field score belongs in the second category, not the first.\n\nTwo more things hold even in the good case. The score routes work to a human; it does not authorize an action. And auditing continues above the threshold, because the threshold was estimated rather than proven.",
+        "callout": {
+          "kind": "contrast",
+          "body": "\"Escalate when the model reports low confidence\" is wrong. \"Route extractions below a calibrated per-field threshold to human review\" can be right. The wording cues are reliable: calibrated, validation set, per-field, threshold, sampled audit suggests the first sense. The model decides it is unsure, self-rated, seems confident suggests the second — eliminate."
+        },
+        "tip": "The same defect turns up inside provenance records, where a synthesizer attaches a confidence number to each claim based on how sure it feels. Metadata does not launder a vibe."
+      },
+      {
+        "id": "classify-defensible-confidence",
+        "type": "classify",
+        "title": "Defensible confidence, or vibes?",
+        "principle": "escalate-on-policy-not-vibes",
+        "prompt": "Six uses of a confidence signal. Keep the ones that would survive an audit; eliminate the rest.",
+        "buckets": [
+          {
+            "id": "defensible",
+            "label": "Defensible",
+            "blurb": "The number was given meaning by measurement"
+          },
+          {
+            "id": "eliminate",
+            "label": "Eliminate",
+            "blurb": "An unmeasured signal being used as a gate"
+          }
+        ],
+        "items": [
+          {
+            "id": "calibrated-per-field",
+            "text": "Per-field extraction confidence, thresholds tuned on a labeled validation set, sub-threshold fields routed to human review",
+            "bucket": "defensible",
+            "why": "Measured against ground truth, per field, and routing to review rather than authorizing an action."
+          },
+          {
+            "id": "self-rated-chat",
+            "text": "The agent rates its handling 1–10 at the end of a chat and escalates below 6",
+            "bucket": "eliminate",
+            "why": "No ground truth, no calibration, and the number is produced by the very process it is judging."
+          },
+          {
+            "id": "sampled-audit",
+            "text": "High-confidence extractions still get a sampled audit",
+            "bucket": "defensible",
+            "why": "The threshold is treated as a routing device rather than a guarantee."
+          },
+          {
+            "id": "prose-confidence",
+            "text": "The pipeline treats \"I'm very confident\" in prose as a pass",
+            "bucket": "eliminate",
+            "why": "Not even a number, let alone a calibrated one."
+          },
+          {
+            "id": "uncalibrated-per-field",
+            "text": "A per-field confidence value used for routing that has never been compared against labels",
+            "bucket": "eliminate",
+            "why": "The sharp one. Per-field shape is not calibration — an uncalibrated number is a vibe with a decimal point."
+          },
+          {
+            "id": "provenance-confidence",
+            "text": "The synthesizer attaches confidence 0.9 to each claim based on how sure it feels",
+            "bucket": "eliminate",
+            "why": "The same defect inside a provenance record, where it launders a vibe as metadata."
+          }
+        ],
+        "hint": "For each one, ask who compared the number to a known-correct answer, and when they last did it.",
+        "explanation": "What makes a confidence signal defensible is not its shape but its provenance: a labeled set gave it meaning, and somebody re-measures. The uncalibrated per-field row is the one that separates candidates, because it has every surface feature of the good case — granular, numeric, used for routing — and none of the substance. The provenance row is the same defect relocated: attaching a self-assessed number to a claim makes the claim look sourced without making it sourced.",
+        "tip": "Sampling audits above the threshold is a positive signal in an answer option. It shows the author understands the threshold was estimated rather than proven, which is exactly the distinction being tested."
+      },
+      {
+        "id": "classify-measurement-sufficient",
+        "type": "classify",
+        "title": "Is this measurement enough to reduce human review?",
+        "principle": "elim-aggregate-accuracy",
+        "prompt": "A team wants to cut manual review on an extraction pipeline. Which of these results would justify it?",
+        "buckets": [
+          {
+            "id": "sufficient",
+            "label": "Sufficient",
+            "blurb": "Segmented the way the decision is"
+          },
+          {
+            "id": "not-sufficient",
+            "label": "Not sufficient",
+            "blurb": "Hides the case that matters"
+          }
+        ],
+        "items": [
+          {
+            "id": "aggregate-97",
+            "text": "97% aggregate accuracy across all documents",
+            "bucket": "not-sufficient",
+            "why": "An aggregate can hide a document type failing badly, and the decision being made is per-document."
+          },
+          {
+            "id": "by-type-and-field",
+            "text": "Accuracy broken out by document type and by field, each above the bar, on a random sample",
+            "bucket": "sufficient",
+            "why": "Segmented the same way the work is, and measured on data that was not used to build it."
+          },
+          {
+            "id": "dominant-type-only",
+            "text": "99% accuracy measured only on the type that is 80% of volume",
+            "bucket": "not-sufficient",
+            "why": "The other 20% is exactly where the unknown lives."
+          },
+          {
+            "id": "tuning-set",
+            "text": "Per-field accuracy measured on the same examples used to tune the prompt",
+            "bucket": "not-sufficient",
+            "why": "No held-out data, so the number measures fit rather than performance."
+          },
+          {
+            "id": "stratified-plus-audit",
+            "text": "Stratified accuracy plus an ongoing audit sample of automated decisions",
+            "bucket": "sufficient",
+            "why": "Measurement continues after the decision, which is what makes it safe to act on."
+          },
+          {
+            "id": "twelve-documents",
+            "text": "Error rate fell after the last prompt change, measured on twelve documents",
+            "bucket": "not-sufficient",
+            "why": "Too small to move a decision. This is a signal to measure properly, not a result."
+          }
+        ],
+        "hint": "Ask whether the measurement is broken out along the same lines as the decision, and whether the data was held out from the thing being measured.",
+        "explanation": "Three separate defects appear here and each is enough on its own: an aggregate that hides a failing segment, a sample that omits the segment carrying the risk, and a measurement taken on the data used to build the system. The two sufficient rows share segmentation plus held-out or ongoing data. Note that the failure is never that the number is too low — every insufficient row here reports a good-looking number.",
+        "tip": "The phrase \"overall accuracy\" in an answer option is close to a tell. If a decision changes who reviews what, the evidence has to be segmented the same way the work is."
+      },
+      {
+        "id": "order-frustrated-customer",
+        "type": "order",
+        "title": "The frustrated customer, handled correctly",
+        "principle": "elim-sentiment-escalation",
+        "prompt": "A customer writes in clearly frustrated about a delayed order, and a documented remedy for the delay exists. Order the agent's response.",
+        "items": [
+          {
+            "id": "acknowledge",
+            "label": "Acknowledge the frustration"
+          },
+          {
+            "id": "resolve",
+            "label": "Offer a concrete resolution the policy supports"
+          },
+          {
+            "id": "escalate",
+            "label": "Escalate when the customer explicitly asks for a person"
+          }
+        ],
+        "correctOrder": [
+          "acknowledge",
+          "resolve",
+          "escalate"
+        ],
+        "why": {
+          "acknowledge": "Acknowledgement is a response style, not a trigger. No sentiment model participates at any point in this sequence, and the agent is not reading emotion in order to decide anything — it is being decent while it applies the rules.",
+          "resolve": "A documented remedy exists, so the case is resolvable and the agent resolves it. Escalating here because the customer sounds upset is the failure this whole module is aimed at.",
+          "escalate": "The trigger is the speech act — \"I want to talk to someone\" — not the mood behind it. It fires on first utterance too: this sequence exists because the customer had not yet asked for a human, not because one refusal is a required toll."
+        },
+        "hint": "Ask what the agent is reading at each step in order to make its decision. If the answer at any step is \"how upset they sound\", that step is wrong.",
+        "explanation": "Frustration changes the tone of the reply and nothing else. The agent acknowledges, applies the remedy the policy supports, and escalates only if an explicit request for a human arrives. Two mistakes flank this sequence: escalating on the frustration itself, and treating the sequence as a gauntlet where the customer has to be refused once before a request is honoured. If somebody opens with \"get me a manager\", escalation is immediate — steps one and two are not a toll.",
+        "tip": "Knowing that sentiment is never a trigger is only half the rule. The other half is that a documented remedy makes a case resolvable no matter how the customer sounds — otherwise you fail the frustrated-customer scenario from the opposite direction."
+      },
+      {
+        "id": "quiz-escalation-trigger",
+        "type": "quiz",
+        "title": "Drill: how escalation should be triggered",
+        "questionId": "ctx-001"
+      },
+      {
+        "id": "quiz-trigger-vs-preference",
+        "type": "quiz",
+        "title": "Drill: a threshold against a stated preference",
+        "questionId": "ctx-105"
+      },
+      {
+        "id": "quiz-supervisor-vs-human",
+        "type": "quiz",
+        "title": "Drill: supervisor agent or human review",
+        "questionId": "ctx-306"
+      },
+      {
+        "id": "quiz-provenance-practices",
+        "type": "quiz",
+        "title": "Drill: the provenance this system is missing",
+        "questionId": "ctx-314"
+      }
+    ]
   }
 ]
