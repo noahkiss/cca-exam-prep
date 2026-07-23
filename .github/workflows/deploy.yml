@@ -18,6 +18,15 @@ jobs:
 
       - run: npm ci
 
+      # Gates run before build so a failure blocks the deploy.
+      # `validate` matters most: it is the only enforcement of content invariants
+      # (e.g. a module quiz step pointing at a question id that does not exist).
+      - run: npm run validate
+
+      - run: npm run lint
+
+      - run: npm test
+
       - run: npm run build
 
       - name: Deploy to Cloudflare Workers

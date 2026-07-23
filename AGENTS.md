@@ -47,4 +47,17 @@ The goal is a **publicly shareable app deployed on Cloudflare as a Worker** (usi
 - Owned repo: this `CLAUDE.md` is just `@AGENTS.md`; keep operational guidance here in `AGENTS.md`, keep the deep brief in `plan.md`.
 - Keep a `STATUS.local.md` (gitignored) with current build state + next steps.
 - Commit atomically; work on `main`.
+- **Commit in logical groups and push.** Don't leave finished work sitting uncommitted in the tree —
+  group related changes into one commit per concern (e.g. tooling setup / a refactor / a build change),
+  then push. Push is what deploys (see below), so a commit that isn't pushed isn't live.
+- **Autonomy:** you don't need to ask before making a judgement call that is reversible, verified by the
+  gates below, and within the brief. Make the call, do the work, and report what you decided and why.
+  Still ask first for anything irreversible, outward-facing, or that changes the deploy/CI contract.
+- **CI is the gate, and CI deploys.** `.github/workflows/deploy.yml` runs on push to `main`:
+  `validate` → `lint` → `test` → `build` → `wrangler deploy`. A failure at any gate blocks the deploy.
+  Run all four locally before pushing:
+  `npm run validate && npm run lint && npm test && npm run build`.
+  Expect exactly 4 known `validate` warnings (1 duplicate-guidance, 3 match-fix-to-failure); a 5th is
+  real. `npm run validate` is the *only* enforcement of content invariants — notably that a module quiz
+  step points at a question id that actually exists — so never remove it from CI.
 - Intended to be a **public repo shared with collaborators** — keep it generic and self-contained; no secrets, no private/internal references.
