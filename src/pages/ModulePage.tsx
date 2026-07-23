@@ -6,7 +6,7 @@
 // write down. Steps are freely navigable: nothing is locked behind the previous
 // step, so a candidate can jump straight to the part they came for.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import type { LearningModule, ModuleStep } from '@/types';
 import { DOMAIN_BY_ID } from '@/types';
@@ -20,15 +20,16 @@ import { StepView, type StepOutcome } from '@/components/module/StepView';
 
 export function ModulePage() {
   const { id = '' } = useParams();
+  const { hash } = useLocation();
   const mod = MODULE_BY_ID[id];
   if (!mod) return <NotFound id={id} />;
-  // Keyed so switching modules remounts the runner: resume state is computed
+  // Keyed so switching modules — or arriving on a #<stepId> deep link while
+  // already reading this one — remounts the runner: the entry point is computed
   // once at mount rather than reconciled through effects.
-  return <ModuleRunner key={mod.id} module={mod} />;
+  return <ModuleRunner key={`${mod.id}${hash}`} module={mod} hash={hash} />;
 }
 
-function ModuleRunner({ module: m }: { module: LearningModule }) {
-  const { hash } = useLocation();
+function ModuleRunner({ module: m, hash }: { module: LearningModule; hash: string }) {
   const { modules } = useStore();
   const progress = modules[m.id];
 
@@ -39,14 +40,6 @@ function ModuleRunner({ module: m }: { module: LearningModule }) {
     const i = target ? m.steps.findIndex((s) => s.id === target) : -1;
     return i >= 0 ? i : 0;
   });
-
-  // A hash arriving while the page is already mounted (a reference deep link
-  // into the module you're reading) still moves the cursor.
-  useEffect(() => {
-    if (!hash) return;
-    const i = m.steps.findIndex((s) => s.id === hash.slice(1));
-    if (i >= 0) setIndex(i);
-  }, [hash, m]);
 
   const step = m.steps[index];
   const recorded = progress?.steps[step.id];

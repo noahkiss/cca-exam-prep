@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import type { Domain, Question } from '@/types';
 import { DOMAINS, DOMAIN_BY_ID, SCENARIO_SETS } from '@/types';
@@ -63,10 +63,11 @@ export function StudyPage() {
   // faithful exam drill; opting in appends them, badged, at the end of the run.
   const [includeSupplementary, setIncludeSupplementary] = useState(false);
   const [sessionSeed] = useState(() => Date.now().toString(36));
-  const [index, setIndex] = useState(0);
-  const [selected, setSelected] = useState<number | null>(null);
-  const [revealed, setRevealed] = useState(false);
-  const [hintLevel, setHintLevel] = useState(0);
+
+  // The run's identity. One key both seeds the shuffle and mounts StudyRun, so
+  // changing either filter reshuffles and restarts the run together — the
+  // restart is a remount, not four state resets reconciled after the fact.
+  const runKey = filterId ?? filter;
 
   // A stable, shuffled run through the filtered bank for this session. A URL
   // targeted-drill filter takes precedence over the domain <select>.
@@ -77,7 +78,7 @@ export function StudyPage() {
         : filter === 'all'
           ? scoped
           : byDomain(filter);
-    const seedKey = filterId ?? filter;
+    const seedKey = runKey;
     const shuffle = (list: Question[], salt: string) =>
       seededPermutation(list.length, `study:${salt}:${seedKey}:${sessionSeed}`).map((i) => list[i]);
 
@@ -86,62 +87,7 @@ export function StudyPage() {
     // Appended rather than interleaved: the exam-relevant run stays intact and
     // the off-blueprint material reads as an explicit extra.
     return [...base, ...shuffle(select(SUPPLEMENTARY_QUESTIONS, supplementaryByDomain), 'supp')];
-  }, [filter, urlFilter, filterId, sessionSeed, includeSupplementary]);
-
-  // Restart the run when the targeted-drill filter changes.
-  useEffect(() => {
-    setIndex(0);
-    setSelected(null);
-    setRevealed(false);
-    setHintLevel(0);
-  }, [filterId]);
-
-  // Turning the supplementary opt-in back off shrinks the pool under the
-  // cursor; clamp rather than falling through to the empty state.
-  useEffect(() => {
-    setIndex((i) => Math.min(i, Math.max(0, pool.length - 1)));
-  }, [pool.length]);
-
-  const question = pool[index];
-
-  const resetForNext = () => {
-    setSelected(null);
-    setRevealed(false);
-    setHintLevel(0);
-  };
-
-  const submit = () => {
-    if (selected === null || !question) return;
-    setRevealed(true);
-    recordAnswer({
-      id: question.id,
-      domain: question.domain,
-      correct: selected === question.answer,
-      usedHint: hintLevel > 0,
-      mode: 'study',
-    });
-  };
-
-  const next = () => {
-    resetForNext();
-    setIndex((i) => Math.min(pool.length - 1, i + 1));
-  };
-
-  const changeFilter = (f: Filter) => {
-    setFilter(f);
-    setIndex(0);
-    resetForNext();
-  };
-
-  if (!question) {
-    return (
-      <p className="text-slate-600 dark:text-slate-400">
-        No questions available for this filter yet.
-      </p>
-    );
-  }
-
-  const atEnd = index >= pool.length - 1;
+  }, [filter, urlFilter, runKey, sessionSeed, includeSupplementary]);
 
   return (
     <div className="space-y-6">
@@ -155,7 +101,7 @@ export function StudyPage() {
             <select
               id="domain-filter"
               value={filter}
-              onChange={(e) => changeFilter(e.target.value as Filter)}
+              onChange={(e) => setFilter(e.target.value as Filter)}
               className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900"
             >
               <option value="all">All domains</option>
@@ -184,17 +130,95 @@ export function StudyPage() {
         </div>
       )}
 
+      <StudyRun
+        key={runKey}
+        pool={pool}
+        sessionSeed={sessionSeed}
+        domainLabel={filter === 'all' ? null : DOMAIN_BY_ID[filter].name}
+        includeSupplementary={includeSupplementary}
+        onIncludeSupplementaryChange={setIncludeSupplementary}
+      />
+    </div>
+  );
+}
+
+/**
+ * One pass through a filtered bank. Mounted under a key derived from the active
+ * filter, so changing filter restarts the run by remount — the cursor, the
+ * selection, the reveal and the hint level all start fresh because they are new
+ * state, not because an effect reset them after the fact.
+ */
+function StudyRun({
+  pool,
+  sessionSeed,
+  domainLabel,
+  includeSupplementary,
+  onIncludeSupplementaryChange,
+}: {
+  pool: Question[];
+  sessionSeed: string;
+  domainLabel: string | null;
+  includeSupplementary: boolean;
+  onIncludeSupplementaryChange: (v: boolean) => void;
+}) {
+  const [cursor, setCursor] = useState(0);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [revealed, setRevealed] = useState(false);
+  const [hintLevel, setHintLevel] = useState(0);
+
+  // Turning the supplementary opt-in back off shrinks the pool under the
+  // cursor. Clamping during render keeps the position valid without a
+  // correcting effect, and leaves the raw cursor intact so opting back in
+  // returns to where you were rather than to the old ceiling.
+  const index = Math.min(cursor, Math.max(0, pool.length - 1));
+  const question = pool[index];
+
+  const resetForNext = () => {
+    setSelected(null);
+    setRevealed(false);
+    setHintLevel(0);
+  };
+
+  const submit = () => {
+    if (selected === null || !question) return;
+    setRevealed(true);
+    recordAnswer({
+      id: question.id,
+      domain: question.domain,
+      correct: selected === question.answer,
+      usedHint: hintLevel > 0,
+      mode: 'study',
+    });
+  };
+
+  const next = () => {
+    resetForNext();
+    setCursor(Math.min(pool.length - 1, index + 1));
+  };
+
+  if (!question) {
+    return (
+      <p className="text-slate-600 dark:text-slate-400">
+        No questions available for this filter yet.
+      </p>
+    );
+  }
+
+  const atEnd = index >= pool.length - 1;
+
+  return (
+    <>
       <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
         <span>
           Question {index + 1} of {pool.length}
         </span>
-        {filter !== 'all' && <span>· {DOMAIN_BY_ID[filter].name}</span>}
+        {domainLabel && <span>· {domainLabel}</span>}
         {SUPPLEMENTARY_QUESTIONS.length > 0 && (
           <label className="ml-auto flex items-center gap-2">
             <input
               type="checkbox"
               checked={includeSupplementary}
-              onChange={(e) => setIncludeSupplementary(e.target.checked)}
+              onChange={(e) => onIncludeSupplementaryChange(e.target.checked)}
               className="h-4 w-4 rounded border-slate-300 text-indigo-600 dark:border-slate-600"
             />
             Include {SUPPLEMENTARY_QUESTIONS.length} off-blueprint question
@@ -263,6 +287,6 @@ export function StudyPage() {
           eliminationRule={question.eliminationRule}
         />
       )}
-    </div>
+    </>
   );
 }
