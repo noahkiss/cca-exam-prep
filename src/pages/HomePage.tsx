@@ -9,6 +9,19 @@ import { useStore } from '@/hooks/useStore';
 
 const MODULE_STEPS = MODULES.reduce((n, m) => n + m.steps.length, 0);
 
+// Left-offset for each domain's weight segment: the running sum of the weights
+// before it. Rendered this way the five bars stack into one 100% blueprint —
+// each fills [prevSum, prevSum + weight) rather than restarting at zero — so the
+// set reads as a partition of the whole instead of five stray part-full bars.
+const DOMAIN_OFFSETS = (() => {
+  let acc = 0;
+  return DOMAINS.map((d) => {
+    const start = acc;
+    acc += d.weight;
+    return start;
+  });
+})();
+
 const MODES = [
   {
     to: '/modules',
@@ -114,7 +127,7 @@ export function HomePage() {
           mean a weak domain costs you real points — a strong average can hide one.
         </p>
         <div className="space-y-3">
-          {DOMAINS.map((d) => (
+          {DOMAINS.map((d, i) => (
             <div
               key={d.id}
               className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
@@ -128,7 +141,7 @@ export function HomePage() {
               <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                 <div
                   className={`h-full rounded-full ${DOMAIN_STYLES[d.id].bar}`}
-                  style={{ width: `${d.weight}%` }}
+                  style={{ marginLeft: `${DOMAIN_OFFSETS[i]}%`, width: `${d.weight}%` }}
                 />
               </div>
               <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{d.blurb}</p>
