@@ -59,9 +59,6 @@ export function StudyPage() {
   const filterId = urlFilter ? `${urlFilter.kind}:${urlFilter.key}` : null;
 
   const [filter, setFilter] = useState<Filter>('all');
-  // Off-blueprint questions are hidden by default so the default run is a
-  // faithful exam drill; opting in appends them, badged, at the end of the run.
-  const [includeSupplementary, setIncludeSupplementary] = useState(false);
   const [sessionSeed] = useState(() => Date.now().toString(36));
 
   // The run's identity. One key both seeds the shuffle and mounts StudyRun, so
@@ -83,11 +80,11 @@ export function StudyPage() {
       seededPermutation(list.length, `study:${salt}:${seedKey}:${sessionSeed}`).map((i) => list[i]);
 
     const base = shuffle(select(QUESTIONS, questionsByDomain), 'blueprint');
-    if (!includeSupplementary) return base;
-    // Appended rather than interleaved: the exam-relevant run stays intact and
-    // the off-blueprint material reads as an explicit extra.
+    // The handful of off-blueprint questions are always appended, badged, after
+    // the exam-relevant run — too few to be worth a toggle, and kept distinct
+    // from the faithful drill by ordering rather than by opt-in.
     return [...base, ...shuffle(select(SUPPLEMENTARY_QUESTIONS, supplementaryByDomain), 'supp')];
-  }, [filter, urlFilter, runKey, sessionSeed, includeSupplementary]);
+  }, [filter, urlFilter, runKey, sessionSeed]);
 
   return (
     <div className="space-y-6">
@@ -135,8 +132,6 @@ export function StudyPage() {
         pool={pool}
         sessionSeed={sessionSeed}
         domainLabel={filter === 'all' ? null : DOMAIN_BY_ID[filter].name}
-        includeSupplementary={includeSupplementary}
-        onIncludeSupplementaryChange={setIncludeSupplementary}
       />
     </div>
   );
@@ -152,24 +147,17 @@ function StudyRun({
   pool,
   sessionSeed,
   domainLabel,
-  includeSupplementary,
-  onIncludeSupplementaryChange,
 }: {
   pool: Question[];
   sessionSeed: string;
   domainLabel: string | null;
-  includeSupplementary: boolean;
-  onIncludeSupplementaryChange: (v: boolean) => void;
 }) {
   const [cursor, setCursor] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [hintLevel, setHintLevel] = useState(0);
 
-  // Turning the supplementary opt-in back off shrinks the pool under the
-  // cursor. Clamping during render keeps the position valid without a
-  // correcting effect, and leaves the raw cursor intact so opting back in
-  // returns to where you were rather than to the old ceiling.
+  // Clamp during render so the cursor stays valid without a correcting effect.
   const index = Math.min(cursor, Math.max(0, pool.length - 1));
   const question = pool[index];
 
@@ -213,18 +201,6 @@ function StudyRun({
           Question {index + 1} of {pool.length}
         </span>
         {domainLabel && <span>· {domainLabel}</span>}
-        {SUPPLEMENTARY_QUESTIONS.length > 0 && (
-          <label className="ml-auto flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={includeSupplementary}
-              onChange={(e) => onIncludeSupplementaryChange(e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-indigo-600 dark:border-slate-600"
-            />
-            Include {SUPPLEMENTARY_QUESTIONS.length} off-blueprint question
-            {SUPPLEMENTARY_QUESTIONS.length === 1 ? '' : 's'}
-          </label>
-        )}
       </div>
 
       {question.examScope === 'supplementary' && (
