@@ -233,14 +233,24 @@ function StudyRun({
             {hintLevel > 0 && !revealed && `${hintLevel} hint${hintLevel > 1 ? 's' : ''} used`}
           </span>
           {!revealed ? (
-            <button
-              type="button"
-              onClick={submit}
-              disabled={selected === null}
-              className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Check answer
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={next}
+                disabled={atEnd}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                Skip
+              </button>
+              <button
+                type="button"
+                onClick={submit}
+                disabled={selected === null}
+                className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Check answer
+              </button>
+            </div>
           ) : (
             <button
               type="button"
