@@ -158,7 +158,13 @@ function ModuleRunner({ module: m, hash }: { module: LearningModule; hash: strin
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900">
+      {/* max-sm scroll-margin on every focusable control in the card keeps a
+          Tab/Shift+Tab stop from scrolling under the pinned bars that sandwich
+          this page on a phone: the step-nav + header above (~108px, clear with
+          7rem) and the step's own action row below (~61px, clear with 4rem).
+          Scoped to the card's controls rather than scroll-padding on the root
+          so no other page's scrolling is affected. Static from sm: up. */}
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm max-sm:[&_a]:scroll-mb-16 max-sm:[&_a]:scroll-mt-28 max-sm:[&_button]:scroll-mb-16 max-sm:[&_button]:scroll-mt-28 sm:p-6 dark:border-slate-800 dark:bg-slate-900">
         <StepView module={m} step={step} recorded={recorded} onGraded={onGraded} />
 
         <div className="mt-6 flex items-center justify-between gap-3">
