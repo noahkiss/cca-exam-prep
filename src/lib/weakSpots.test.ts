@@ -16,7 +16,31 @@ vi.mock('@/lib/questions', () => ({
   },
 }));
 
+// Likewise a controlled module set. `weakSpots` imports only STEP_BY_KEY and
+// stepKey from here — keep this mock in sync if that ever changes, or the real
+// module (and data/modules.json) loads and the fixtures below stop being the
+// whole world.
+vi.mock('@/lib/modules', () => ({
+  stepKey: (moduleId: string, stepId: string) => `mod:${moduleId}:${stepId}`,
+  STEP_BY_KEY: {
+    'mod:m1:s1': {
+      module: { id: 'm1', domain: 'arch', scenarioSets: ['support-agent'] },
+      step: { id: 's1', type: 'classify', principle: 'constrain-dont-add' },
+    },
+    'mod:m1:s2': {
+      // Quiz steps are counted under their question id, never here.
+      module: { id: 'm1', domain: 'arch', scenarioSets: ['support-agent'] },
+      step: { id: 's2', type: 'quiz', principle: 'constrain-dont-add' },
+    },
+    'mod:m2:s1': {
+      module: { id: 'm2', domain: 'mcp', examScope: 'supplementary' },
+      step: { id: 's1', type: 'order', principle: 'constrain-dont-add' },
+    },
+  },
+}));
+
 import { analyzeWeakSpots, topWeakSpots } from './weakSpots';
+import { stepKey } from './modules';
 import { migrate, STATE_VERSION, type AppState } from './storage';
 
 const NOW = 1_700_000_000_000;
@@ -152,5 +176,58 @@ describe('storage migration', () => {
     };
     const migrated = migrate({ version: 3, modules });
     expect(migrated.modules).toEqual(modules);
+  });
+});
+
+describe('learning-module steps', () => {
+  function withModules(steps: Record<string, Record<string, { correct: boolean | null; attempts: number }>>): AppState {
+    const state = baseState();
+    state.modules = Object.fromEntries(
+      Object.entries(steps).map(([moduleId, byStep]) => [
+        moduleId,
+        {
+          id: moduleId,
+          startedAt: NOW,
+          lastStepId: Object.keys(byStep)[0],
+          steps: Object.fromEntries(
+            Object.entries(byStep).map(([stepId, o]) => [
+              stepId,
+              { correct: o.correct, attempts: o.attempts, usedHint: false, ts: NOW },
+            ]),
+          ),
+        },
+      ]),
+    );
+    return state;
+  }
+
+  it('counts a graded step toward its module domain and its step principle', () => {
+    const state = withModules({ m1: { s1: { correct: false, attempts: 3 } } });
+    state.attempts = [{ id: stepKey('m1', 's1'), ts: NOW, correct: false, usedHint: false, mode: 'module' }];
+
+    const areas = analyzeWeakSpots(state, NOW);
+    const domain = areas.find((a) => a.kind === 'domain' && a.key === 'arch');
+    expect(domain).toBeDefined();
+    expect(domain?.attempts).toBe(3);
+    expect(domain?.correct).toBe(0);
+    expect(domain?.status).toBe('weak');
+    expect(areas.some((a) => a.kind === 'principle' && a.key === 'constrain-dont-add')).toBe(true);
+    // Exactly one declared scenario set, so the outcome is attributable.
+    expect(areas.some((a) => a.kind === 'scenarioSet' && a.key === 'support-agent')).toBe(true);
+  });
+
+  it('ignores ungraded teach steps entirely', () => {
+    const state = withModules({ m1: { s1: { correct: null, attempts: 1 } } });
+    expect(analyzeWeakSpots(state, NOW)).toHaveLength(0);
+  });
+
+  it('ignores quiz steps, which are already counted under their question id', () => {
+    const state = withModules({ m1: { s2: { correct: false, attempts: 2 } } });
+    expect(analyzeWeakSpots(state, NOW)).toHaveLength(0);
+  });
+
+  it('excludes supplementary modules from mastery, as it does supplementary questions', () => {
+    const state = withModules({ m2: { s1: { correct: false, attempts: 4 } } });
+    expect(analyzeWeakSpots(state, NOW)).toHaveLength(0);
   });
 });

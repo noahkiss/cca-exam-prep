@@ -1,6 +1,44 @@
 import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { PRINCIPLES, ELIMINATION_RULES, GOTCHAS } from '@/data/reference';
+import { MODULES } from '@/lib/modules';
+
+/**
+ * Reverse index: reference entry id → the modules that teach it. A module claims
+ * an entry through `principles[]` (module-level) or through any step's
+ * `principle`; where a specific step matches, the link deep-links to that step.
+ */
+const TEACHING_MODULES: Record<string, { id: string; title: string; stepId?: string }[]> = {};
+for (const m of MODULES) {
+  const ids = new Set<string>(m.principles);
+  for (const s of m.steps) if (s.principle) ids.add(s.principle);
+  for (const pid of ids) {
+    const step = m.steps.find((s) => s.principle === pid);
+    (TEACHING_MODULES[pid] ??= []).push({ id: m.id, title: m.title, stepId: step?.id });
+  }
+}
+
+/** "Modules that teach this" — the reverse of ReferenceLink. */
+function TaughtBy({ id }: { id: string }) {
+  const taught = TEACHING_MODULES[id];
+  if (!taught || taught.length === 0) return null;
+  return (
+    <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
+      <span className="font-semibold">Modules that teach this:</span>{' '}
+      {taught.map((t, i) => (
+        <span key={t.id}>
+          {i > 0 && ', '}
+          <Link
+            to={`/modules/${t.id}${t.stepId ? `#${t.stepId}` : ''}`}
+            className="font-medium text-indigo-600 underline decoration-indigo-300 underline-offset-2 hover:decoration-indigo-500 dark:text-indigo-400 dark:decoration-indigo-500/50"
+          >
+            {t.title}
+          </Link>
+        </span>
+      ))}
+    </p>
+  );
+}
 
 export function ReferencePage() {
   const { hash } = useLocation();
@@ -44,6 +82,7 @@ export function ReferencePage() {
               <p className="whitespace-pre-line text-sm leading-relaxed text-slate-700 dark:text-slate-300">
                 {p.body}
               </p>
+              <TaughtBy id={p.id} />
             </article>
           ))}
         </div>
@@ -89,6 +128,7 @@ export function ReferencePage() {
               <p className="whitespace-pre-line text-sm leading-relaxed text-slate-700 dark:text-slate-300">
                 {g.body}
               </p>
+              <TaughtBy id={g.id} />
             </article>
           ))}
         </div>

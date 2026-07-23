@@ -257,7 +257,10 @@ export function StudyPage() {
       {revealed && (
         <Feedback
           correct={selected === question.answer}
-          question={question}
+          explanation={question.explanation}
+          tip={question.tip}
+          principle={question.principle}
+          eliminationRule={question.eliminationRule}
         />
       )}
     </div>

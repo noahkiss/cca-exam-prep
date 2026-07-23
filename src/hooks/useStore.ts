@@ -11,9 +11,11 @@ import {
   type AppState,
   type DrillMode,
   type ExamRecord,
+  type ModuleProgress,
   type QuestionStat,
 } from '@/lib/storage';
 import { newCard, qualityFor, review, type SrsCard } from '@/lib/srs';
+import { MODULE_BY_ID, stepKey } from '@/lib/modules';
 
 type Listener = () => void;
 const listeners = new Set<Listener>();
@@ -75,6 +77,67 @@ export function recordAnswer(params: {
     // Append-only attempt log for trend/recency analysis, capped (oldest dropped).
     const next = [...s.attempts, { id, ts: now, correct, usedHint, mode }];
     s.attempts = next.length > ATTEMPT_LOG_CAP ? next.slice(-ATTEMPT_LOG_CAP) : next;
+  });
+  emit();
+}
+
+/**
+ * Record progress through a single learning-module step.
+ *
+ * `correct: null` means ungraded (a `teach` step): it advances progress but is
+ * never evidence, so it is deliberately kept out of the attempt log — that log
+ * is what `weakSpots` reads, and `AttemptLog.correct` is a plain boolean with no
+ * honest encoding for "not graded".
+ *
+ * `quiz` steps are also skipped here, because the caller records them through
+ * `recordAnswer` under the real question id. That entry is strictly better: it
+ * resolves to the question's own principle and scenario set, and it feeds
+ * `questionStats`, `missed` and SM-2. Logging both would double-count the domain.
+ */
+export function recordStep(params: {
+  moduleId: string;
+  stepId: string;
+  /** `null` for ungraded exposition. */
+  correct: boolean | null;
+  usedHint: boolean;
+}): void {
+  const { moduleId, stepId, correct, usedHint } = params;
+  const now = Date.now();
+  updateState((s) => {
+    const prev: ModuleProgress = s.modules[moduleId] ?? {
+      id: moduleId,
+      startedAt: now,
+      lastStepId: stepId,
+      steps: {},
+    };
+    const prevStep = prev.steps[stepId];
+    const next: ModuleProgress = {
+      ...prev,
+      lastStepId: stepId,
+      steps: {
+        ...prev.steps,
+        [stepId]: {
+          correct,
+          attempts: (prevStep?.attempts ?? 0) + 1,
+          // Sticky: a hint taken on any attempt stays taken.
+          usedHint: usedHint || (prevStep?.usedHint ?? false),
+          ts: now,
+        },
+      },
+    };
+
+    const mod = MODULE_BY_ID[moduleId];
+    if (mod && next.completedAt === undefined && mod.steps.every((st) => next.steps[st.id])) {
+      next.completedAt = now;
+    }
+    s.modules = { ...s.modules, [moduleId]: next };
+
+    const isQuiz = mod?.steps.find((st) => st.id === stepId)?.type === 'quiz';
+    if (correct !== null && !isQuiz) {
+      const entry = { id: stepKey(moduleId, stepId), ts: now, correct, usedHint, mode: 'module' as const };
+      const log = [...s.attempts, entry];
+      s.attempts = log.length > ATTEMPT_LOG_CAP ? log.slice(-ATTEMPT_LOG_CAP) : log;
+    }
   });
   emit();
 }

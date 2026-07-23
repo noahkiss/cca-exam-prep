@@ -2,6 +2,9 @@ import type { Principle } from '@/types';
 
 // Progressive hints: nudge → the relevant principle/concept → near-give (the
 // elimination rule that applies). None of the levels name the correct option.
+//
+// Module steps carry no elimination rule, so the ladder is two levels there and
+// three for a question. The rung is dropped rather than faked.
 
 export function HintPanel({
   level,
@@ -13,7 +16,7 @@ export function HintPanel({
   level: number;
   hint: string;
   principle: Principle | undefined;
-  eliminationRule: string;
+  eliminationRule?: string;
   onReveal: () => void;
 }) {
   const steps: { label: string; body: string }[] = [
@@ -22,11 +25,13 @@ export function HintPanel({
       label: 'Principle',
       body: principle ? `${principle.title}\n\n${principle.body.split('\n\n')[0]}` : hint,
     },
-    {
+  ];
+  if (eliminationRule) {
+    steps.push({
       label: 'Elimination rule',
       body: `An answer is almost certainly wrong if it ${lowerFirst(eliminationRule)}`,
-    },
-  ];
+    });
+  }
 
   const shown = steps.slice(0, level);
   const canReveal = level < steps.length;

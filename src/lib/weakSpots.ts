@@ -11,6 +11,7 @@ import type { AppState } from '@/lib/storage';
 import type { Domain } from '@/types';
 import { DOMAIN_BY_ID, SCENARIO_SETS } from '@/types';
 import { QUESTIONS_BY_ID } from '@/lib/questions';
+import { STEP_BY_KEY, stepKey } from '@/lib/modules';
 import { REFERENCE_BY_ID } from '@/data/reference';
 import { PASS_THRESHOLD, MAX_SCORE, MIN_SCORE, toScaled } from '@/lib/scoring';
 
@@ -44,8 +45,31 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_TREND_BUCKETS = 8;
 const SCENARIO_SET_BY_ID = Object.fromEntries(SCENARIO_SETS.map((s) => [s.id, s]));
 
+/**
+ * Resolve the dimension key for a graded module step. Step ids are namespaced
+ * `mod:<moduleId>:<stepId>` so they can never collide with a question id. The
+ * domain comes from the module (its primary key into mastery); the principle
+ * comes from the step, which is finer-grained and may be absent.
+ */
+function moduleKeyFor(kind: WeakAreaKind, id: string): string | null {
+  const entry = STEP_BY_KEY[id];
+  if (!entry) return null;
+  // Same exclusion as a supplementary question, for the same reason.
+  if (entry.module.examScope === 'supplementary') return null;
+  // A quiz step's evidence is already counted under the real question id, which
+  // resolves to a finer principle and a scenario set. Counting it here as well
+  // would double-weight the domain.
+  if (entry.step.type === 'quiz') return null;
+  if (kind === 'domain') return entry.module.domain;
+  if (kind === 'principle') return entry.step.principle ?? null;
+  // A module framed in several scenario sets can't attribute an outcome to one.
+  const sets = entry.module.scenarioSets ?? [];
+  return sets.length === 1 ? sets[0] : null;
+}
+
 /** Resolve the dimension key for a question id, or null if it can't be mapped. */
 function keyFor(kind: WeakAreaKind, id: string): string | null {
+  if (id.startsWith('mod:')) return moduleKeyFor(kind, id);
   const q = QUESTIONS_BY_ID[id];
   if (!q) return null;
   // Off-blueprint questions never enter mastery math: the exam cannot test them,
@@ -100,6 +124,23 @@ function areasForKind(kind: WeakAreaKind, state: AppState): WeakArea[] {
     bucket.correct += stat.correct;
     bucket.lastSeen = Math.max(bucket.lastSeen, stat.lastSeen);
     agg.set(key, bucket);
+  }
+
+  // Graded module steps carry the same weight as a drilled question. Their
+  // aggregate lives in `state.modules`, not `questionStats`, so it is folded in
+  // here — without this the attempt-log join below would give module work a
+  // trend line and no accuracy.
+  for (const progress of Object.values(state.modules)) {
+    for (const [stepId, outcome] of Object.entries(progress.steps)) {
+      if (outcome.correct === null) continue; // ungraded exposition
+      const key = keyFor(kind, stepKey(progress.id, stepId));
+      if (key === null) continue;
+      const bucket = agg.get(key) ?? { attempts: 0, correct: 0, lastSeen: 0 };
+      bucket.attempts += outcome.attempts;
+      bucket.correct += outcome.correct ? 1 : 0;
+      bucket.lastSeen = Math.max(bucket.lastSeen, outcome.ts);
+      agg.set(key, bucket);
+    }
   }
 
   // Chronological outcomes per key, from the append-only attempt log.

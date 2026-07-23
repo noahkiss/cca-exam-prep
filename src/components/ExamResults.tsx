@@ -135,7 +135,13 @@ export function ExamResults({
                     revealed
                   />
                 </div>
-                <Feedback correct={chosen === q.answer} question={q} />
+                <Feedback
+                  correct={chosen === q.answer}
+                  explanation={q.explanation}
+                  tip={q.tip}
+                  principle={q.principle}
+                  eliminationRule={q.eliminationRule}
+                />
               </div>
             );
           })}

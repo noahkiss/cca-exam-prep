@@ -111,7 +111,15 @@ export function ReviewPage() {
               )}
             </div>
           </div>
-          {revealed && <Feedback correct={selected === question.answer} question={question} />}
+          {revealed && (
+            <Feedback
+              correct={selected === question.answer}
+              explanation={question.explanation}
+              tip={question.tip}
+              principle={question.principle}
+              eliminationRule={question.eliminationRule}
+            />
+          )}
         </>
       )}
     </div>

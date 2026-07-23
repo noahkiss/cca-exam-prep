@@ -1,8 +1,26 @@
-import type { Question } from '@/types';
 import { ReferenceLink } from './ReferenceLink';
 
-/** Post-answer explanation panel: verdict, explanation, elimination rule, tip. */
-export function Feedback({ correct, question }: { correct: boolean; question: Question }) {
+/**
+ * Post-answer explanation panel: verdict, explanation, elimination rule, tip.
+ *
+ * Takes the four content fields rather than a whole Question so module steps —
+ * which have no options and no elimination rule — share this panel instead of
+ * growing a near-identical twin. Every section is optional and simply omitted
+ * when absent; a question supplies all of them, so its rendering is unchanged.
+ */
+export function Feedback({
+  correct,
+  explanation,
+  tip,
+  principle,
+  eliminationRule,
+}: {
+  correct: boolean;
+  explanation?: string;
+  tip?: string;
+  principle?: string;
+  eliminationRule?: string;
+}) {
   return (
     <div
       className={`rounded-xl border p-5 sm:p-6 ${
@@ -22,30 +40,36 @@ export function Feedback({ correct, question }: { correct: boolean; question: Qu
       </div>
 
       <div className="space-y-4 text-sm">
-        <div>
-          <h3 className="mb-1 font-semibold text-slate-900 dark:text-slate-100">Explanation</h3>
-          <p className="leading-relaxed text-slate-700 dark:text-slate-300">
-            {question.explanation}
-          </p>
-        </div>
+        {explanation && (
+          <div>
+            <h3 className="mb-1 font-semibold text-slate-900 dark:text-slate-100">Explanation</h3>
+            <p className="leading-relaxed text-slate-700 dark:text-slate-300">{explanation}</p>
+          </div>
+        )}
 
-        <div className="rounded-lg bg-white/60 p-3 dark:bg-slate-900/40">
-          <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-            Elimination rule
-          </h3>
-          <p className="text-slate-700 dark:text-slate-300">{question.eliminationRule}</p>
-        </div>
+        {eliminationRule && (
+          <div className="rounded-lg bg-white/60 p-3 dark:bg-slate-900/40">
+            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Elimination rule
+            </h3>
+            <p className="text-slate-700 dark:text-slate-300">{eliminationRule}</p>
+          </div>
+        )}
 
-        <div className="rounded-lg border-l-4 border-indigo-400 bg-white/60 p-3 dark:border-indigo-500/60 dark:bg-slate-900/40">
-          <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
-            💡 Tip
-          </h3>
-          <p className="text-slate-700 dark:text-slate-300">{question.tip}</p>
-        </div>
+        {tip && (
+          <div className="rounded-lg border-l-4 border-indigo-400 bg-white/60 p-3 dark:border-indigo-500/60 dark:bg-slate-900/40">
+            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
+              💡 Tip
+            </h3>
+            <p className="text-slate-700 dark:text-slate-300">{tip}</p>
+          </div>
+        )}
 
-        <div className="text-slate-600 dark:text-slate-400">
-          Learn more: <ReferenceLink id={question.principle} />
-        </div>
+        {principle && (
+          <div className="text-slate-600 dark:text-slate-400">
+            Learn more: <ReferenceLink id={principle} />
+          </div>
+        )}
       </div>
     </div>
   );

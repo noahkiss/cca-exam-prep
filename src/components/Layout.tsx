@@ -3,6 +3,7 @@ import { ThemeToggle } from './ThemeToggle';
 
 const NAV = [
   { to: '/', label: 'Home', end: true },
+  { to: '/modules', label: 'Modules' },
   { to: '/study', label: 'Study' },
   { to: '/exam', label: 'Exam' },
   { to: '/review', label: 'Review' },
@@ -24,7 +25,10 @@ export function Layout() {
             </span>
           </NavLink>
 
-          <nav className="flex flex-1 items-center gap-1 overflow-x-auto text-sm">
+          {/* min-w-0 is load-bearing: a flex child defaults to min-width:auto, so
+              without it the nav refuses to shrink below its content and the last
+              links run off the right edge instead of scrolling. */}
+          <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto text-sm">
             {NAV.map((item) => (
               <NavLink
                 key={item.to}

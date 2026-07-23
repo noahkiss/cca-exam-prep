@@ -2,11 +2,20 @@ import { Link } from 'react-router-dom';
 import { DOMAINS } from '@/types';
 import { DOMAIN_STYLES } from '@/lib/domainStyles';
 import { QUESTIONS } from '@/lib/questions';
+import { MODULES } from '@/lib/modules';
 import { PASS_THRESHOLD, MAX_SCORE } from '@/lib/scoring';
 import { EXAM_SIZE } from '@/lib/sampling';
 import { useStore } from '@/hooks/useStore';
 
+const MODULE_STEPS = MODULES.reduce((n, m) => n + m.steps.length, 0);
+
 const MODES = [
+  {
+    to: '/modules',
+    title: 'Learning modules',
+    blurb: `${MODULES.length} guided tracks, ${MODULE_STEPS} steps: read the idea, sort the cases, sequence the pipeline, then answer a real bank question on it.`,
+    accent: 'from-sky-500 to-cyan-500',
+  },
   {
     to: '/study',
     title: 'Study mode',

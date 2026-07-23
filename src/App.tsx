@@ -2,6 +2,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useTheme } from '@/hooks/useTheme';
 import { Layout } from '@/components/Layout';
 import { HomePage } from '@/pages/HomePage';
+import { ModulesPage } from '@/pages/ModulesPage';
+import { ModulePage } from '@/pages/ModulePage';
 import { StudyPage } from '@/pages/StudyPage';
 import { ExamPage } from '@/pages/ExamPage';
 import { ReviewPage } from '@/pages/ReviewPage';
@@ -16,6 +18,8 @@ export default function App() {
     <Routes>
       <Route element={<Layout />}>
         <Route index element={<HomePage />} />
+        <Route path="modules" element={<ModulesPage />} />
+        <Route path="modules/:id" element={<ModulePage />} />
         <Route path="study" element={<StudyPage />} />
         <Route path="exam" element={<ExamPage />} />
         <Route path="review" element={<ReviewPage />} />
