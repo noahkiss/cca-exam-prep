@@ -77,6 +77,22 @@ export interface ScenarioSetMeta {
   name: string;
 }
 
+/**
+ * Whether a piece of content is on the certification blueprint.
+ *
+ * `blueprint` (the default when the field is absent) means the official Exam
+ * Guide v1.0 covers the topic, so it belongs in exam draws and in mastery math.
+ * `supplementary` means the topic is genuinely useful engineering knowledge that
+ * the guide's Out-of-Scope list rules out — MCP transports, `cache_control`
+ * placement. Supplementary content is kept and clearly badged, never dropped,
+ * but it must not be sampled into an exam, scored, or counted toward mastery:
+ * a strong transports score must not inflate apparent `mcp` readiness on a
+ * topic that cannot appear on the exam.
+ */
+export type ExamScope = 'blueprint' | 'supplementary';
+
+export const EXAM_SCOPES: ExamScope[] = ['blueprint', 'supplementary'];
+
 export const SCENARIO_SETS: ScenarioSetMeta[] = [
   { id: 'support-agent', name: 'Customer Support Resolution Agent' },
   { id: 'code-gen', name: 'Code Generation with Claude Code' },
@@ -95,6 +111,11 @@ export interface Question {
   /** Stable unique id, e.g. "arch-012". */
   id: string;
   domain: Domain;
+  /**
+   * Defaults to `blueprint` when absent. `supplementary` questions are excluded
+   * from exam draws, from scoring, and from mastery — see `ExamScope`.
+   */
+  examScope?: ExamScope;
   /** Which of the six scenario sets this belongs to (for 4-of-6 exam sampling). */
   scenarioSet?: ScenarioSet;
   /** The broken-system / situation context. */

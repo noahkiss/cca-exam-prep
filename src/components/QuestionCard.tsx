@@ -10,6 +10,7 @@ import { useMemo } from 'react';
 import type { Question } from '@/types';
 import { seededPermutation } from '@/lib/rng';
 import { DomainBadge } from './DomainBadge';
+import { ScopeBadge } from './ScopeBadge';
 
 const SLOT_LABELS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
@@ -40,6 +41,7 @@ export function QuestionCard({
     <div>
       <div className="mb-3 flex items-center gap-2">
         {showDomain && <DomainBadge domain={question.domain} />}
+        <ScopeBadge scope={question.examScope} />
         <span className="text-xs text-slate-400 dark:text-slate-500">{question.id}</span>
       </div>
 

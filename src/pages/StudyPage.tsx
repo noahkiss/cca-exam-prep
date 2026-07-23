@@ -2,13 +2,19 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import type { Domain, Question } from '@/types';
 import { DOMAINS, DOMAIN_BY_ID, SCENARIO_SETS } from '@/types';
-import { QUESTIONS, questionsByDomain } from '@/lib/questions';
+import {
+  QUESTIONS,
+  SUPPLEMENTARY_QUESTIONS,
+  questionsByDomain,
+  supplementaryByDomain,
+} from '@/lib/questions';
 import { PRINCIPLES, REFERENCE_BY_ID } from '@/data/reference';
 import { seededPermutation } from '@/lib/rng';
 import { recordAnswer, useStore } from '@/hooks/useStore';
 import { QuestionCard } from '@/components/QuestionCard';
 import { Feedback } from '@/components/Feedback';
 import { HintPanel } from '@/components/HintPanel';
+import { SUPPLEMENTARY_NOTE } from '@/components/ScopeBadge';
 
 const PRINCIPLE_BY_ID = Object.fromEntries(PRINCIPLES.map((p) => [p.id, p]));
 const SCENARIO_SET_BY_ID = Object.fromEntries(SCENARIO_SETS.map((s) => [s.id, s]));
@@ -53,6 +59,9 @@ export function StudyPage() {
   const filterId = urlFilter ? `${urlFilter.kind}:${urlFilter.key}` : null;
 
   const [filter, setFilter] = useState<Filter>('all');
+  // Off-blueprint questions are hidden by default so the default run is a
+  // faithful exam drill; opting in appends them, badged, at the end of the run.
+  const [includeSupplementary, setIncludeSupplementary] = useState(false);
   const [sessionSeed] = useState(() => Date.now().toString(36));
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
@@ -62,15 +71,22 @@ export function StudyPage() {
   // A stable, shuffled run through the filtered bank for this session. A URL
   // targeted-drill filter takes precedence over the domain <select>.
   const pool = useMemo(() => {
-    const base = urlFilter
-      ? QUESTIONS.filter((q) => matchesFilter(q, urlFilter))
-      : filter === 'all'
-        ? QUESTIONS
-        : questionsByDomain(filter);
+    const select = (scoped: Question[], byDomain: (d: Domain) => Question[]) =>
+      urlFilter
+        ? scoped.filter((q) => matchesFilter(q, urlFilter))
+        : filter === 'all'
+          ? scoped
+          : byDomain(filter);
     const seedKey = filterId ?? filter;
-    const order = seededPermutation(base.length, `study:${seedKey}:${sessionSeed}`);
-    return order.map((i) => base[i]);
-  }, [filter, urlFilter, filterId, sessionSeed]);
+    const shuffle = (list: Question[], salt: string) =>
+      seededPermutation(list.length, `study:${salt}:${seedKey}:${sessionSeed}`).map((i) => list[i]);
+
+    const base = shuffle(select(QUESTIONS, questionsByDomain), 'blueprint');
+    if (!includeSupplementary) return base;
+    // Appended rather than interleaved: the exam-relevant run stays intact and
+    // the off-blueprint material reads as an explicit extra.
+    return [...base, ...shuffle(select(SUPPLEMENTARY_QUESTIONS, supplementaryByDomain), 'supp')];
+  }, [filter, urlFilter, filterId, sessionSeed, includeSupplementary]);
 
   // Restart the run when the targeted-drill filter changes.
   useEffect(() => {
@@ -79,6 +95,12 @@ export function StudyPage() {
     setRevealed(false);
     setHintLevel(0);
   }, [filterId]);
+
+  // Turning the supplementary opt-in back off shrinks the pool under the
+  // cursor; clamp rather than falling through to the empty state.
+  useEffect(() => {
+    setIndex((i) => Math.min(i, Math.max(0, pool.length - 1)));
+  }, [pool.length]);
 
   const question = pool[index];
 
@@ -162,12 +184,30 @@ export function StudyPage() {
         </div>
       )}
 
-      <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
+      <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
         <span>
           Question {index + 1} of {pool.length}
         </span>
         {filter !== 'all' && <span>· {DOMAIN_BY_ID[filter].name}</span>}
+        {SUPPLEMENTARY_QUESTIONS.length > 0 && (
+          <label className="ml-auto flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={includeSupplementary}
+              onChange={(e) => setIncludeSupplementary(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-indigo-600 dark:border-slate-600"
+            />
+            Include {SUPPLEMENTARY_QUESTIONS.length} off-blueprint question
+            {SUPPLEMENTARY_QUESTIONS.length === 1 ? '' : 's'}
+          </label>
+        )}
       </div>
+
+      {question.examScope === 'supplementary' && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+          {SUPPLEMENTARY_NOTE}
+        </div>
+      )}
 
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900">
         <QuestionCard

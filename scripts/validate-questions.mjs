@@ -37,6 +37,10 @@ const REQUIRED_STRING_FIELDS = [
 ];
 // Optional provenance tag on imported (MIT) questions. Originals omit it.
 const ALLOWED_SOURCES = ['connectry-mit', 'neerajkr7-mit', 'original'];
+const EXAM_SCOPES = ['blueprint', 'supplementary'];
+/** Mirrors EXAM_SIZE in src/lib/sampling.ts — an exam must still be drawable. */
+const EXAM_SIZE = 60;
+const supplementaryIds = [];
 
 const errors = [];
 const warnings = [];
@@ -128,6 +132,13 @@ for (let i = 0; i < questions.length; i++) {
   // domain
   if (DOMAINS.includes(q.domain)) domainCounts[q.domain]++;
   else fail(`${label}: domain "${q.domain}" is not one of ${DOMAINS.join(', ')}.`);
+
+  // examScope (optional; absent means blueprint)
+  if (q.examScope !== undefined && !EXAM_SCOPES.includes(q.examScope)) {
+    fail(`${label}: examScope "${q.examScope}" is not one of ${EXAM_SCOPES.join(', ')}.`);
+  } else if (q.examScope === 'supplementary') {
+    supplementaryIds.push(q.id);
+  }
 
   // scenarioSet (optional)
   if (q.scenarioSet !== undefined && !SCENARIO_SETS.includes(q.scenarioSet)) {
@@ -303,10 +314,27 @@ if (shortestPct > LENGTH_BAND.ceiling) {
   );
 }
 
+// Supplementary questions are excluded from exam draws by `src/lib/questions.ts`,
+// so the exam bank is the blueprint subset — it must still be able to fill a
+// 60-item paper. Distribution stats above deliberately stay over the whole file:
+// re-basing them would move the intentional pre-existing warnings.
+const blueprintTotal = total - supplementaryIds.length;
+if (blueprintTotal < EXAM_SIZE) {
+  fail(
+    `Only ${blueprintTotal} blueprint questions after excluding ${supplementaryIds.length} supplementary — an exam needs ${EXAM_SIZE}.`,
+  );
+}
+
 // ---- Report ----
 function report() {
   console.log('\n=== CCA-F question bank validation ===\n');
   console.log(`Total questions: ${total ?? 0}`);
+  console.log(
+    `  exam bank (blueprint):  ${blueprintTotal}` +
+      (supplementaryIds.length
+        ? `\n  supplementary (excluded from exams/scoring/mastery): ${supplementaryIds.length} — ${supplementaryIds.join(', ')}`
+        : ''),
+  );
 
   console.log('\nPer-domain counts:');
   for (const d of DOMAINS) console.log(`  ${d.padEnd(5)} ${domainCounts[d] ?? 0}`);

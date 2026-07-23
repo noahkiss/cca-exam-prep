@@ -3,10 +3,11 @@
 // malformed entries with a console warning rather than crashing the app.
 
 import type { Domain, Question, ScenarioSet } from '@/types';
-import { DOMAIN_BY_ID, SCENARIO_SETS } from '@/types';
+import { DOMAIN_BY_ID, EXAM_SCOPES, SCENARIO_SETS } from '@/types';
 import rawQuestions from '../../data/questions.json';
 
 const VALID_SCENARIO_SETS = new Set<string>(SCENARIO_SETS.map((s) => s.id));
+const VALID_EXAM_SCOPES = new Set<string>(EXAM_SCOPES);
 
 function isValidQuestion(q: unknown): q is Question {
   if (typeof q !== 'object' || q === null) return false;
@@ -28,6 +29,12 @@ function isValidQuestion(q: unknown): q is Question {
   if (
     o.scenarioSet !== undefined &&
     !(typeof o.scenarioSet === 'string' && VALID_SCENARIO_SETS.has(o.scenarioSet))
+  ) {
+    return false;
+  }
+  if (
+    o.examScope !== undefined &&
+    !(typeof o.examScope === 'string' && VALID_EXAM_SCOPES.has(o.examScope))
   ) {
     return false;
   }
@@ -65,15 +72,39 @@ function loadQuestions(): Question[] {
   return valid;
 }
 
-/** The validated, de-duplicated question bank. */
-export const QUESTIONS: Question[] = loadQuestions();
+/** True when a question covers a topic the official guide rules out of scope. */
+export function isSupplementary(q: Question): boolean {
+  return q.examScope === 'supplementary';
+}
 
+/**
+ * Every validated, de-duplicated question, both scopes. Use this only where an
+ * id must resolve regardless of scope (e.g. review of an already-answered
+ * question); everything exam-facing should use `QUESTIONS`.
+ */
+export const ALL_QUESTIONS: Question[] = loadQuestions();
+
+/**
+ * The exam bank: blueprint-scoped questions only. This is the single choke
+ * point that keeps supplementary content out of exam draws, scoring and
+ * mastery — filter here rather than at each call site.
+ */
+export const QUESTIONS: Question[] = ALL_QUESTIONS.filter((q) => !isSupplementary(q));
+
+/** Off-blueprint questions, surfaced only behind an explicit opt-in. */
+export const SUPPLEMENTARY_QUESTIONS: Question[] = ALL_QUESTIONS.filter(isSupplementary);
+
+/** Indexed over BOTH scopes so a stored attempt id always resolves. */
 export const QUESTIONS_BY_ID: Record<string, Question> = Object.fromEntries(
-  QUESTIONS.map((q) => [q.id, q]),
+  ALL_QUESTIONS.map((q) => [q.id, q]),
 );
 
 export function questionsByDomain(domain: Domain): Question[] {
   return QUESTIONS.filter((q) => q.domain === domain);
+}
+
+export function supplementaryByDomain(domain: Domain): Question[] {
+  return SUPPLEMENTARY_QUESTIONS.filter((q) => q.domain === domain);
 }
 
 /** Count of questions available per scenario set (for exam sampling UI). */

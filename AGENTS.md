@@ -39,6 +39,8 @@ The goal is a **publicly shareable app deployed on Cloudflare as a Worker** (usi
 - **Avoid the tell:** do NOT let the correct answer always be the longest option or always land in slot A/B (a documented flaw in AI-generated banks). Randomize option order at render time; write distractors of comparable length.
 - Distractors must be **plausible real engineering mistakes**, not absurd filler.
 - Grading is **deterministic** (fixed answer key), never LLM-judged.
+- **Off-blueprint content is kept, not dropped — flag it.** Topics the official Exam Guide's Out-of-Scope list rules out (MCP transports, `cache_control` placement) carry `examScope: 'supplementary'`. Supplementary content is excluded from exam draws, from scoring, and from mastery math, and renders with a visible "Not on the exam" badge. Absent = `blueprint`. Never add a supplementary question to make the bank look bigger — the exam bank must stand on its own at ≥60 items (enforced by the validator).
+- **Key on behaviour, never on a brand name.** The guide tests routing/chaining/parallel *behaviour* but never uses the "Building Effective Agents" pattern names (`orchestrator-worker`, `evaluator-optimizer` — zero hits). A question whose answer hinges on recognising a name is off-blueprint even when the concept is not.
 
 ## Conventions
 

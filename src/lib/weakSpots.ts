@@ -48,6 +48,10 @@ const SCENARIO_SET_BY_ID = Object.fromEntries(SCENARIO_SETS.map((s) => [s.id, s]
 function keyFor(kind: WeakAreaKind, id: string): string | null {
   const q = QUESTIONS_BY_ID[id];
   if (!q) return null;
+  // Off-blueprint questions never enter mastery math: the exam cannot test them,
+  // so a strong score there must not read as readiness for the domain. Checked
+  // inline rather than via `isSupplementary` so this stays a pure field read.
+  if (q.examScope === 'supplementary') return null;
   if (kind === 'domain') return q.domain;
   if (kind === 'principle') return q.principle;
   return q.scenarioSet ?? null;

@@ -6,6 +6,13 @@ vi.mock('@/lib/questions', () => ({
   QUESTIONS_BY_ID: {
     q1: { id: 'q1', domain: 'arch', principle: 'constrain-dont-add', scenarioSet: 'support-agent' },
     q2: { id: 'q2', domain: 'ctx', principle: 'match-fix-to-failure', scenarioSet: 'ci' },
+    q3: {
+      id: 'q3',
+      domain: 'mcp',
+      principle: 'constrain-dont-add',
+      scenarioSet: 'support-agent',
+      examScope: 'supplementary',
+    },
   },
 }));
 
@@ -58,6 +65,24 @@ describe('analyzeWeakSpots', () => {
     const arch = analyzeWeakSpots(state, NOW).find((a) => a.kind === 'domain' && a.key === 'arch');
     expect(arch?.trend).toEqual([0, 0, 0, 1, 1, 1]);
     expect(arch?.delta).toBe(1);
+  });
+
+  it('excludes supplementary questions from every mastery dimension', () => {
+    const state = baseState();
+    state.questionStats = {
+      // q3 is off-blueprint and answered perfectly; q1 shares its principle and
+      // q3 shares q1's scenario set, so a leak would show up on all three lenses.
+      q3: { id: 'q3', domain: 'mcp', attempts: 8, correct: 8, lastCorrect: true, lastSeen: NOW },
+      q1: { id: 'q1', domain: 'arch', attempts: 4, correct: 0, lastCorrect: false, lastSeen: NOW },
+    };
+    const areas = analyzeWeakSpots(state, NOW);
+
+    expect(areas.some((a) => a.kind === 'domain' && a.key === 'mcp')).toBe(false);
+    // The shared principle and scenario set reflect q1 alone, not q1 + q3.
+    const principle = areas.find((a) => a.kind === 'principle' && a.key === 'constrain-dont-add');
+    const set = areas.find((a) => a.kind === 'scenarioSet' && a.key === 'support-agent');
+    expect(principle?.attempts).toBe(4);
+    expect(set?.attempts).toBe(4);
   });
 });
 

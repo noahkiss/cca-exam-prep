@@ -420,6 +420,7 @@
   {
     "id": "pe-007",
     "domain": "pe",
+    "examScope": "supplementary",
     "scenarioSet": "support-agent",
     "scenario": "A support agent prepends the same 8,000-token policy manual and tool definitions to every request. Latency and cost are high because this identical prefix is reprocessed on every single call.",
     "question": "What is the right optimization?",
@@ -433,7 +434,7 @@
     "hint": "The expensive part is reprocessing an identical block every call. Is there a mechanism to reuse that work?",
     "explanation": "Prompt caching marks a stable prefix (system + tools + long context) with cache_control; it must sit at the front and be identical across calls, and cache reads are much cheaper and lower-latency. (A) summarizing loses policy detail to save tokens. (B) moving the manual to the end breaks caching, which requires the stable content at the front. (C) splitting across requests fragments the context the agent needs. Reuse the identical prefix via caching.",
     "eliminationRule": "Shrinks/moves/splits a stable prefix instead of caching it at the front.",
-    "tip": "Prompt caching: mark the stable prefix (system + tools + long context) with cache_control at the FRONT, identical across calls. Big discount + lower latency on reads.",
+    "tip": "Prompt caching: mark the stable prefix (system + tools + long context) with cache_control at the FRONT, identical across calls. Big discount + lower latency on reads. Off-blueprint: the official Exam Guide excludes prompt-caching implementation detail \"beyond knowing it exists\" — that caching helps is in scope, where the cache_control breakpoint goes is not.",
     "principle": "match-fix-to-failure"
   },
   {
@@ -477,6 +478,7 @@
   {
     "id": "mcp-003",
     "domain": "mcp",
+    "examScope": "supplementary",
     "scenarioSet": "dev-productivity",
     "scenario": "A developer wraps a local CLI on their laptop as an MCP server for personal use; a colleague later needs the same capability exposed to several remote agents running across different machines.",
     "question": "Which transports fit these two cases?",
@@ -490,7 +492,7 @@
     "hint": "One transport is a local subprocess over stdin/stdout; the other is meant to be reached over the network. Which case is which?",
     "explanation": "Local same-machine servers use stdio (a subprocess over stdin/stdout); remote/shared servers use streamable HTTP. (A) HTTP for a purely local personal tool adds needless network machinery. (B) stdio can't naturally serve multiple remote agents across machines. (D) raw WebSocket isn't the MCP-standard remote transport here. Match transport to locality.",
     "eliminationRule": "Uses one transport for both instead of stdio-local / HTTP-remote.",
-    "tip": "MCP transports: local same-machine → stdio (subprocess over stdin/stdout); remote/shared → streamable HTTP.",
+    "tip": "MCP transports: local same-machine → stdio (subprocess over stdin/stdout); remote/shared → streamable HTTP. Off-blueprint: the official Exam Guide excludes MCP server deployment/hosting (infra, networking) and never mentions stdio or transports — good engineering to know, not testable.",
     "principle": "match-fix-to-failure"
   },
   {
