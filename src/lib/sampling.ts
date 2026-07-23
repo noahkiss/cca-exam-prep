@@ -45,7 +45,7 @@ export function sampleExam(all: Question[], seed: string): Question[] {
   const chosenSets = shuffleInPlace([...availableSets], rand).slice(0, SETS_PER_EXAM);
 
   // Pool = questions from the chosen sets, plus untagged as filler.
-  let pool: Question[] = [];
+  const pool: Question[] = [];
   for (const id of chosenSets) pool.push(...(bySet.get(id) ?? []));
   pool.push(...untagged);
 

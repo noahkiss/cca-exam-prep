@@ -27,6 +27,7 @@ type ReviewCard =
   | { kind: 'step'; module: LearningModule; step: ClassifyStep | OrderStep };
 
 /** Exported for unit testing — this is the queue's whole namespace contract. */
+// eslint-disable-next-line react-refresh/only-export-components -- test seam, not a component
 export function resolveCard(id: string): ReviewCard | undefined {
   const question = QUESTIONS_BY_ID[id];
   if (question) return { kind: 'question', question };
