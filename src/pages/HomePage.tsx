@@ -1,7 +1,7 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { DOMAINS } from '@/types';
 import { DOMAIN_STYLES } from '@/lib/domainStyles';
-import { QUESTIONS } from '@/lib/questions';
 import { MODULES } from '@/lib/modules';
 import { PASS_THRESHOLD, MAX_SCORE } from '@/lib/scoring';
 import { EXAM_SIZE } from '@/lib/sampling';
@@ -46,6 +46,20 @@ export function HomePage() {
   const { exams } = useStore();
   const best = exams.reduce((m, e) => Math.max(m, e.scaled), 0);
 
+  // The question bank is a ~540 kB chunk and the landing page only wants its
+  // length, so it is pulled in after paint rather than blocking first render.
+  // Doubles as a prefetch: the chunk is warm by the time a mode is picked.
+  const [bankSize, setBankSize] = useState<number | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void import('@/lib/questions').then((m) => {
+      if (alive) setBankSize(m.QUESTIONS.length);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   return (
     <div className="space-y-10">
       <section className="text-center">
@@ -59,7 +73,7 @@ export function HomePage() {
         </p>
         <div className="mt-5 flex flex-wrap items-center justify-center gap-3 text-sm">
           <span className="rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-            {QUESTIONS.length} questions in the bank
+            {bankSize === null ? 'Scenario-based question bank' : `${bankSize} questions in the bank`}
           </span>
           <span className="rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
             Pass at {PASS_THRESHOLD} / {MAX_SCORE}

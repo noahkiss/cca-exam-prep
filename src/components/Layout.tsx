@@ -1,5 +1,20 @@
+import { Suspense } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { ThemeToggle } from './ThemeToggle';
+
+/**
+ * Shown while a lazy route chunk downloads. The min-height reserves roughly a
+ * page worth of space so the footer doesn't jump up and then back down as the
+ * real page swaps in.
+ */
+function RouteFallback() {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center" role="status">
+      <span className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-600 dark:border-slate-700 dark:border-t-indigo-400" />
+      <span className="sr-only">Loading…</span>
+    </div>
+  );
+}
 
 const NAV = [
   { to: '/', label: 'Home', end: true },
@@ -52,7 +67,9 @@ export function Layout() {
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-8">
-        <Outlet />
+        <Suspense fallback={<RouteFallback />}>
+          <Outlet />
+        </Suspense>
       </main>
 
       <footer className="mx-auto max-w-5xl px-4 py-8 text-center text-xs text-slate-400 dark:text-slate-600">

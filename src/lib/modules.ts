@@ -16,7 +16,6 @@ import type {
   OrderStep,
 } from '@/types';
 import { DOMAIN_BY_ID, EXAM_SCOPES } from '@/types';
-import { QUESTIONS_BY_ID } from './questions';
 import rawModules from '../../data/modules.json';
 
 const VALID_EXAM_SCOPES = new Set<string>(EXAM_SCOPES);
@@ -91,17 +90,14 @@ function isValidStep(s: unknown, warnCtx: string): s is ModuleStep {
       return true;
     }
 
-    case 'quiz': {
-      if (!isNonEmptyString(o.questionId)) return false;
-      // A quiz step pointing at a question that no longer exists would render
-      // an empty card, so drop it here instead.
-      if (!(o.questionId in QUESTIONS_BY_ID)) {
-        // eslint-disable-next-line no-console
-        console.warn(`[modules] ${warnCtx}: quiz step references unknown question`, o.questionId);
-        return false;
-      }
-      return true;
-    }
+    case 'quiz':
+      // Deliberately NOT resolved against the question bank here. Doing so made
+      // this module a static dependency of the ~540 kB bank chunk, which then
+      // rode along on every page that touches the store. The dangling-reference
+      // case is caught earlier and later instead: `scripts/validate-modules.mjs`
+      // fails the build on a quiz pointing at an unknown question, and
+      // `QuizStepView` renders nothing rather than an empty card if one slips by.
+      return isNonEmptyString(o.questionId);
 
     default:
       return false;
