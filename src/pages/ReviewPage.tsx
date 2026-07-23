@@ -133,8 +133,13 @@ export function ReviewPage() {
         </div>
       ) : (
         <>
+          {/* The queue is snapshotted at session start (see `queue` memo), so
+              this denominator is fixed for the session. The tab badge counts
+              live remaining and legitimately drifts below it as you retire
+              cards — "this session" names the difference so it doesn't read as
+              a bug. */}
           <div className="text-sm text-slate-500 dark:text-slate-400">
-            {pos + 1} of {queue.length}
+            {pos + 1} of {queue.length} this session
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900">
             {card.kind === 'question' ? (

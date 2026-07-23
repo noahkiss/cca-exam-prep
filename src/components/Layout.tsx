@@ -1,5 +1,5 @@
-import { Suspense } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { Suspense, useEffect, useRef } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { ThemeToggle } from './ThemeToggle';
 
 /**
@@ -27,11 +27,23 @@ const NAV = [
 ];
 
 export function Layout() {
+  const { pathname } = useLocation();
+  const navRef = useRef<HTMLElement>(null);
+
+  // On mobile the nav scrolls horizontally, so the current page's link can sit
+  // off-screen (e.g. Dashboard when the row starts at Home). Bring the active
+  // link into view on navigation so you can always see where you are.
+  useEffect(() => {
+    navRef.current
+      ?.querySelector('[aria-current="page"]')
+      ?.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }, [pathname]);
+
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80">
         <div className="mx-auto flex max-w-5xl items-center gap-4 px-4 py-3">
-          <NavLink to="/" className="flex items-center gap-2 font-bold tracking-tight">
+          <NavLink to="/" className="flex shrink-0 items-center gap-2 font-bold tracking-tight">
             <span className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-600 text-sm text-white">
               CCA
             </span>
@@ -42,8 +54,13 @@ export function Layout() {
 
           {/* min-w-0 is load-bearing: a flex child defaults to min-width:auto, so
               without it the nav refuses to shrink below its content and the last
-              links run off the right edge instead of scrolling. */}
-          <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto text-sm">
+              links run off the right edge instead of scrolling.
+              The mask fades the right edge on mobile so the scroll cutoff reads
+              as "more this way" instead of a link truncated mid-word. */}
+          <nav
+            ref={navRef}
+            className="flex min-w-0 flex-1 scroll-px-3 items-center gap-1 overflow-x-auto scroll-smooth text-sm max-sm:[mask-image:linear-gradient(to_right,#000_calc(100%-2rem),transparent)]"
+          >
             {NAV.map((item) => (
               <NavLink
                 key={item.to}
@@ -62,7 +79,9 @@ export function Layout() {
             ))}
           </nav>
 
-          <ThemeToggle />
+          <div className="shrink-0">
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 

@@ -51,7 +51,11 @@ export function ClassifyStepView({
         {step.prompt}
       </p>
 
-      <dl className="mb-5 grid gap-2 sm:grid-cols-2">
+      {/* Two columns even on mobile: the legend scrolls out of view once you
+          reach the items, so keeping it short makes the scroll back to it
+          cheap. A sticky legend would over-crowd the pinned mobile chrome
+          (header + step-nav + action row), so density is the lighter fix. */}
+      <dl className="mb-5 grid grid-cols-2 gap-2">
         {step.buckets.map((b) => (
           <div
             key={b.id}
