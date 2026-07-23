@@ -93,6 +93,11 @@ export function recordAnswer(params: {
  * `recordAnswer` under the real question id. That entry is strictly better: it
  * resolves to the question's own principle and scenario set, and it feeds
  * `questionStats`, `missed` and SM-2. Logging both would double-count the domain.
+ *
+ * A graded non-quiz step also gets its own SM-2 card, keyed by `stepKey` so it
+ * cannot collide with a question id. It deliberately stays out of
+ * `questionStats` and `missed`: both are question-only, and the review page's
+ * missed tab resolves its ids against the question bank.
  */
 export function recordStep(params: {
   moduleId: string;
@@ -100,8 +105,10 @@ export function recordStep(params: {
   /** `null` for ungraded exposition. */
   correct: boolean | null;
   usedHint: boolean;
+  /** Where the attempt happened. `module` (walking the module) unless the SM-2 queue drove it. */
+  mode?: DrillMode;
 }): void {
-  const { moduleId, stepId, correct, usedHint } = params;
+  const { moduleId, stepId, correct, usedHint, mode = 'module' } = params;
   const now = Date.now();
   updateState((s) => {
     const prev: ModuleProgress = s.modules[moduleId] ?? {
@@ -134,9 +141,14 @@ export function recordStep(params: {
 
     const isQuiz = mod?.steps.find((st) => st.id === stepId)?.type === 'quiz';
     if (correct !== null && !isQuiz) {
-      const entry = { id: stepKey(moduleId, stepId), ts: now, correct, usedHint, mode: 'module' as const };
+      const key = stepKey(moduleId, stepId);
+      const entry = { id: key, ts: now, correct, usedHint, mode };
       const log = [...s.attempts, entry];
       s.attempts = log.length > ATTEMPT_LOG_CAP ? log.slice(-ATTEMPT_LOG_CAP) : log;
+
+      // SM-2 update, same shape as recordAnswer but under the namespaced key.
+      const card: SrsCard = s.srs[key] ?? newCard(key, now);
+      s.srs = { ...s.srs, [key]: review(card, qualityFor(correct, usedHint), now) };
     }
   });
   emit();
