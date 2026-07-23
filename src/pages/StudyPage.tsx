@@ -152,14 +152,23 @@ function StudyRun({
   sessionSeed: string;
   domainLabel: string | null;
 }) {
+  // The working order starts as the shuffled pool; skipping re-appends the
+  // question so it comes back around later in the same run. Re-inits on remount
+  // (the parent keys StudyRun by filter), so a filter change starts fresh.
+  const [order, setOrder] = useState<Question[]>(() => pool);
   const [cursor, setCursor] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [hintLevel, setHintLevel] = useState(0);
+  // Skipped questions still awaiting an answer — drives the "to revisit" note.
+  const [toRevisit, setToRevisit] = useState(0);
 
   // Clamp during render so the cursor stays valid without a correcting effect.
-  const index = Math.min(cursor, Math.max(0, pool.length - 1));
-  const question = pool[index];
+  const index = Math.min(cursor, Math.max(0, order.length - 1));
+  const question = order[index];
+  // Original first-pass items live at indices < pool.length; anything beyond is
+  // a re-appended skip.
+  const isRequeued = index >= pool.length;
 
   const resetForNext = () => {
     setSelected(null);
@@ -170,6 +179,7 @@ function StudyRun({
   const submit = () => {
     if (selected === null || !question) return;
     setRevealed(true);
+    if (isRequeued) setToRevisit((n) => Math.max(0, n - 1));
     recordAnswer({
       id: question.id,
       domain: question.domain,
@@ -181,7 +191,17 @@ function StudyRun({
 
   const next = () => {
     resetForNext();
-    setCursor(Math.min(pool.length - 1, index + 1));
+    setCursor(Math.min(order.length - 1, index + 1));
+  };
+
+  const skip = () => {
+    if (!question) return;
+    // Re-append the skipped question and advance. Counting only first-pass
+    // skips keeps the tally right when a re-appended question is skipped again.
+    setOrder((o) => [...o, question]);
+    if (!isRequeued) setToRevisit((n) => n + 1);
+    resetForNext();
+    setCursor(index + 1);
   };
 
   if (!question) {
@@ -192,15 +212,20 @@ function StudyRun({
     );
   }
 
-  const atEnd = index >= pool.length - 1;
+  const atEnd = index >= order.length - 1;
 
   return (
     <>
       <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
         <span>
-          Question {index + 1} of {pool.length}
+          Question {index + 1} of {order.length}
         </span>
         {domainLabel && <span>· {domainLabel}</span>}
+        {toRevisit > 0 && (
+          <span className="text-amber-600 dark:text-amber-400">
+            · {toRevisit} skipped to revisit
+          </span>
+        )}
       </div>
 
       {question.examScope === 'supplementary' && (
@@ -236,8 +261,8 @@ function StudyRun({
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={next}
-                disabled={atEnd}
+                onClick={skip}
+                disabled={pool.length <= 1}
                 className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
               >
                 Skip
