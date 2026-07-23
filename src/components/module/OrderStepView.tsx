@@ -12,6 +12,7 @@ import { seededPermutation } from '@/lib/rng';
 import type { StepOutcome } from './StepView';
 import {
   PriorAttemptNote,
+  STEP_ACTION_ROW,
   StepButton,
   StepFeedback,
   StepHeading,
@@ -174,7 +175,7 @@ export function OrderStepView({
         />
       )}
 
-      <div className="mt-6 flex items-center justify-end gap-3">
+      <div className={`${STEP_ACTION_ROW} justify-end`}>
         {graded ? (
           <StepButton variant="secondary" onClick={() => setResult(null)}>
             Try again

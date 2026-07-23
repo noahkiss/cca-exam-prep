@@ -103,6 +103,17 @@ export function PriorAttemptNote({
   );
 }
 
+/**
+ * Class list for a step's action row. On a phone a step runs several screens
+ * tall — the largest classify step is 13 items — so the row pins to the bottom
+ * of the viewport rather than sitting below content the reader hasn't reached
+ * yet. It bleeds to the card's edges (`-mx-5` against the card's `p-5`) so the
+ * pinned bar reads as chrome. Static from `sm:` up, where nothing is far enough
+ * away to need it. Callers add their own justification.
+ */
+export const STEP_ACTION_ROW =
+  'mt-6 flex items-center gap-3 max-sm:sticky max-sm:bottom-0 max-sm:z-10 max-sm:-mx-5 max-sm:border-t max-sm:border-slate-200 max-sm:bg-white/95 max-sm:px-5 max-sm:py-3 max-sm:backdrop-blur dark:max-sm:border-slate-800 dark:max-sm:bg-slate-900/95';
+
 /** The submit/continue button used by every graded step. */
 export function StepButton({
   children,
@@ -124,7 +135,7 @@ export function StepButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`rounded-lg px-5 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${classes}`}
+      className={`shrink-0 whitespace-nowrap rounded-lg px-5 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${classes}`}
     >
       {children}
     </button>

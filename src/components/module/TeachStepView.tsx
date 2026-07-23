@@ -6,7 +6,13 @@ import type { TeachStep } from '@/types';
 import type { StepOutcome } from './StepView';
 import { Callout } from './Callout';
 import { CodeBlockView } from './CodeBlockView';
-import { PriorAttemptNote, StepButton, StepHeading, StepHints } from './StepFrame';
+import {
+  PriorAttemptNote,
+  STEP_ACTION_ROW,
+  StepButton,
+  StepHeading,
+  StepHints,
+} from './StepFrame';
 import { ReferenceLink } from '../ReferenceLink';
 
 export function TeachStepView({
@@ -58,7 +64,7 @@ export function TeachStepView({
         </p>
       )}
 
-      <div className="mt-6 flex items-center justify-end">
+      <div className={`${STEP_ACTION_ROW} justify-end`}>
         {acknowledged ? (
           <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
             ✓ Read

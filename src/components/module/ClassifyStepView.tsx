@@ -11,6 +11,7 @@ import { gradeClassify } from '@/lib/modules';
 import type { StepOutcome } from './StepView';
 import {
   PriorAttemptNote,
+  STEP_ACTION_ROW,
   StepButton,
   StepFeedback,
   StepHeading,
@@ -115,7 +116,7 @@ export function ClassifyStepView({
                       aria-checked={isChosen}
                       disabled={graded}
                       onClick={() => setPlaced((p) => ({ ...p, [item.id]: b.id }))}
-                      className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-default ${chipClasses}`}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-default ${chipClasses}`}
                     >
                       {b.label}
                       {isKey && !isChosen && <span aria-label=" (correct)"> ✓</span>}
@@ -148,11 +149,11 @@ export function ClassifyStepView({
         />
       )}
 
-      <div className="mt-6 flex items-center justify-between gap-3">
-        <span className="text-sm text-slate-500 dark:text-slate-400">
+      <div className={`${STEP_ACTION_ROW} justify-between`}>
+        <span className="text-xs text-slate-500 sm:text-sm dark:text-slate-400">
           {!graded &&
             unplaced > 0 &&
-            `${unplaced} of ${step.items.length} still unplaced`}
+            `${unplaced} of ${step.items.length} unplaced`}
         </span>
         {graded ? (
           <StepButton variant="secondary" onClick={() => setResult(null)}>

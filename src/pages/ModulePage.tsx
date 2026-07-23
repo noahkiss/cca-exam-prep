@@ -135,6 +135,36 @@ function ModuleRunner({ module: m }: { module: LearningModule }) {
         />
       </div>
 
+      {/* Phone only. A step runs several screens tall, and the only way onward
+          used to be the row at the very bottom of the card — so step position
+          and prev/next ride along at the top of the viewport instead. The step's
+          own submit pins to the *bottom* on the same breakpoint (STEP_ACTION_ROW);
+          keeping these two at opposite edges is what stops them colliding. */}
+      <div className="sticky top-14 z-10 -mx-4 flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50/95 px-4 py-2 backdrop-blur sm:hidden dark:border-slate-800 dark:bg-slate-950/95">
+        <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
+          Step {index + 1} of {m.steps.length}
+        </span>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setIndex((i) => Math.max(0, i - 1))}
+            disabled={atStart}
+            aria-label="Previous step"
+            className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 disabled:opacity-40 dark:border-slate-700 dark:text-slate-200"
+          >
+            ←
+          </button>
+          <button
+            type="button"
+            onClick={() => setIndex((i) => Math.min(m.steps.length - 1, i + 1))}
+            disabled={atEnd}
+            className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-40"
+          >
+            Next →
+          </button>
+        </div>
+      </div>
+
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900">
         <StepView module={m} step={step} recorded={recorded} onGraded={onGraded} />
 

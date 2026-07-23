@@ -14,6 +14,7 @@ import { QuestionCard } from '../QuestionCard';
 import { SUPPLEMENTARY_NOTE } from '../ScopeBadge';
 import {
   PriorAttemptNote,
+  STEP_ACTION_ROW,
   StepButton,
   StepFeedback,
   StepHeading,
@@ -78,7 +79,7 @@ export function QuizStepView({
       )}
 
       {!revealed && (
-        <div className="mt-6 flex items-center justify-end">
+        <div className={`${STEP_ACTION_ROW} justify-end`}>
           <StepButton onClick={submit} disabled={selected === null}>
             Check answer
           </StepButton>
