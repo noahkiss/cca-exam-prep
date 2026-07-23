@@ -152,23 +152,23 @@ function StudyRun({
   sessionSeed: string;
   domainLabel: string | null;
 }) {
-  // The working order starts as the shuffled pool; skipping re-appends the
-  // question so it comes back around later in the same run. Re-inits on remount
-  // (the parent keys StudyRun by filter), so a filter change starts fresh.
-  const [order, setOrder] = useState<Question[]>(() => pool);
+  // The run walks a round at a time. The first round is the shuffled pool;
+  // skipping sets a question aside into `pending` rather than re-appending it
+  // inline, and at the end of a round the pending skips become the next round.
+  // All re-init on remount (the parent keys StudyRun by filter), so a filter
+  // change starts fresh.
+  const [queue, setQueue] = useState<Question[]>(() => pool);
+  const [pending, setPending] = useState<Question[]>([]);
+  const [round, setRound] = useState(0);
   const [cursor, setCursor] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [hintLevel, setHintLevel] = useState(0);
-  // Skipped questions still awaiting an answer — drives the "to revisit" note.
-  const [toRevisit, setToRevisit] = useState(0);
 
   // Clamp during render so the cursor stays valid without a correcting effect.
-  const index = Math.min(cursor, Math.max(0, order.length - 1));
-  const question = order[index];
-  // Original first-pass items live at indices < pool.length; anything beyond is
-  // a re-appended skip.
-  const isRequeued = index >= pool.length;
+  const index = Math.min(cursor, Math.max(0, queue.length - 1));
+  const question = queue[index];
+  const atEnd = index >= queue.length - 1;
 
   const resetForNext = () => {
     setSelected(null);
@@ -176,10 +176,18 @@ function StudyRun({
     setHintLevel(0);
   };
 
+  // Roll the collected skips into a fresh round.
+  const startRound = (items: Question[]) => {
+    setQueue(items);
+    setPending([]);
+    setRound((r) => r + 1);
+    setCursor(0);
+    resetForNext();
+  };
+
   const submit = () => {
     if (selected === null || !question) return;
     setRevealed(true);
-    if (isRequeued) setToRevisit((n) => Math.max(0, n - 1));
     recordAnswer({
       id: question.id,
       domain: question.domain,
@@ -191,17 +199,21 @@ function StudyRun({
 
   const next = () => {
     resetForNext();
-    setCursor(Math.min(order.length - 1, index + 1));
+    setCursor(Math.min(queue.length - 1, index + 1));
   };
 
   const skip = () => {
     if (!question) return;
-    // Re-append the skipped question and advance. Counting only first-pass
-    // skips keeps the tally right when a re-appended question is skipped again.
-    setOrder((o) => [...o, question]);
-    if (!isRequeued) setToRevisit((n) => n + 1);
-    resetForNext();
-    setCursor(index + 1);
+    const collected = [...pending, question];
+    // Skipping the last of a round has nowhere further to go, so roll straight
+    // into the revisit round; otherwise just set it aside and advance.
+    if (atEnd) {
+      startRound(collected);
+    } else {
+      setPending(collected);
+      resetForNext();
+      setCursor(index + 1);
+    }
   };
 
   if (!question) {
@@ -212,21 +224,25 @@ function StudyRun({
     );
   }
 
-  const atEnd = index >= order.length - 1;
-
   return (
     <>
       <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
         <span>
-          Question {index + 1} of {order.length}
+          Question {index + 1} of {queue.length}
         </span>
         {domainLabel && <span>· {domainLabel}</span>}
-        {toRevisit > 0 && (
+        {pending.length > 0 && (
           <span className="text-amber-600 dark:text-amber-400">
-            · {toRevisit} skipped to revisit
+            · {pending.length} skipped to revisit
           </span>
         )}
       </div>
+
+      {round > 0 && (
+        <div className="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm text-indigo-900 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-200">
+          Revisiting skipped questions.
+        </div>
+      )}
 
       {question.examScope === 'supplementary' && (
         <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
@@ -276,6 +292,14 @@ function StudyRun({
                 Check answer
               </button>
             </div>
+          ) : atEnd && pending.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => startRound(pending)}
+              className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+            >
+              Revisit {pending.length} skipped →
+            </button>
           ) : (
             <button
               type="button"
