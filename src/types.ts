@@ -146,6 +146,106 @@ export interface Question {
   references?: string[];
 }
 
+/** ---- Learning modules ---- */
+
+/** A fenced artifact rendered read-only inside a step. */
+export interface CodeBlock {
+  lang: 'json' | 'python' | 'bash' | 'yaml' | 'markdown' | 'text';
+  caption?: string;
+  source: string;
+}
+
+/**
+ * Fields every step carries. Mirrors Question's meta-learning contract: the
+ * hint/explanation/tip trio is part of the schema, not optional decoration.
+ */
+export interface StepBase {
+  /** Unique within the module. */
+  id: string;
+  title: string;
+  /** Reference entry id — powers ReferenceLink and the weak-spot rollup. */
+  principle?: string;
+  /** Progressive nudge. Never reveals the key. Same contract as Question.hint. */
+  hint?: string;
+  /** Shown after grading: why the key is right, why the plausible wrongs fail. */
+  explanation?: string;
+  /** The gotcha tied to THIS step. */
+  tip?: string;
+  /** Page-level doc URLs only — same discipline as Question.references. */
+  references?: string[];
+}
+
+/** Ungraded exposition. Plain text with newlines, no HTML — as Principle.body. */
+export interface TeachStep extends StepBase {
+  type: 'teach';
+  body: string;
+  code?: CodeBlock[];
+  callout?: { kind: 'warn' | 'note' | 'contrast'; body: string };
+}
+
+/** Sort items into fixed buckets. Graded: every item lands in its keyed bucket. */
+export interface ClassifyStep extends StepBase {
+  type: 'classify';
+  prompt: string;
+  buckets: { id: string; label: string; blurb?: string }[];
+  items: { id: string; text: string; bucket: string; why: string }[];
+}
+
+/** Put stages in sequence. Graded against correctOrder or an acceptable alternate. */
+export interface OrderStep extends StepBase {
+  type: 'order';
+  prompt: string;
+  items: { id: string; label: string }[];
+  correctOrder: string[];
+  /** For genuinely commutative stages — encode it rather than pick a canon. */
+  acceptableOrders?: string[][];
+  /** Per-item rationale, revealed after grading. */
+  why: Record<string, string>;
+}
+
+/** Pulls a question straight from the existing bank. No inline duplication. */
+export interface QuizStep extends StepBase {
+  type: 'quiz';
+  questionId: string;
+}
+
+/**
+ * Tier 1 step types. `diagnose`/`build` (Tier 2) and `trace`/`reflect` (Tier 3)
+ * join this union when their renderers land; keeping the union narrow means the
+ * renderer's exhaustiveness check catches an unimplemented type at compile time.
+ */
+export type ModuleStep = TeachStep | ClassifyStep | OrderStep | QuizStep;
+
+/** Step types that produce a graded outcome. `teach` is exposition only. */
+export type GradedStepType = 'classify' | 'order' | 'quiz';
+
+/** A guided study module. Content lives in data/modules.json. */
+export interface LearningModule {
+  /** Stable id, e.g. "arch-agentic-loop". */
+  id: string;
+  /** Primary domain — module results join into mastery on this key. */
+  domain: Domain;
+  kind: 'core' | 'capstone';
+  /** See ExamScope. Supplementary modules are excluded from mastery. */
+  examScope?: ExamScope;
+  title: string;
+  /** One-line promise: what the candidate can do after this module. */
+  outcome: string;
+  /** 3–6 concrete capabilities this module certifies. */
+  objectives: string[];
+  /** Ordering within the domain track. */
+  order: number;
+  estimatedMinutes: number;
+  /** Module ids that should come first. Soft gating — advisory, never blocking. */
+  prerequisites?: string[];
+  /** Reference entry ids (see reference.ts) this module teaches. */
+  principles: string[];
+  /** Scenario sets the exercises are framed in. */
+  scenarioSets?: ScenarioSet[];
+  references?: string[];
+  steps: ModuleStep[];
+}
+
 /** ---- Reference ("Get a step ahead") content model ---- */
 
 /** An external link to an authoritative source (Anthropic docs, MCP spec, etc.). */

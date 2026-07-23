@@ -8,13 +8,27 @@ import type { SrsCard } from './srs';
 const STORAGE_KEY = 'cca-exam-prep:v1';
 
 /** Current on-disk schema version. Bump + add a migration when the shape changes. */
-export const STATE_VERSION = 2;
+export const STATE_VERSION = 3;
 
 /** Keep at most this many attempt-log entries (drop oldest). */
 export const ATTEMPT_LOG_CAP = 2000;
 
 /** Which mode a single question drill happened in. */
-export type DrillMode = 'study' | 'exam' | 'review';
+export type DrillMode = 'study' | 'exam' | 'review' | 'module';
+
+/** Progress through one learning module. */
+export interface ModuleProgress {
+  id: string;
+  startedAt: number;
+  completedAt?: number;
+  /** Where to resume. */
+  lastStepId: string;
+  /**
+   * Per-step outcome. Ungraded steps record `correct: null` — the same treatment
+   * that keeps them out of mastery math.
+   */
+  steps: Record<string, { correct: boolean | null; attempts: number; usedHint: boolean; ts: number }>;
+}
 
 /**
  * One appended-only record of a single question drill. We store only the
@@ -57,8 +71,10 @@ export interface ExamRecord {
 }
 
 export interface AppState {
-  version: 2;
+  version: 3;
   questionStats: Record<string, QuestionStat>;
+  /** Learning-module progress, keyed by module id. */
+  modules: Record<string, ModuleProgress>;
   /** Ids the user has missed at least once and not since retired. */
   missed: string[];
   srs: Record<string, SrsCard>;
@@ -72,6 +88,7 @@ function defaultState(): AppState {
   return {
     version: STATE_VERSION,
     questionStats: {},
+    modules: {},
     missed: [],
     srs: {},
     exams: [],
@@ -82,14 +99,19 @@ function defaultState(): AppState {
 
 /**
  * Migrate an older persisted blob up to the current version. Forward-fills any
- * missing fields with defaults, then applies each step. v1 had no attempt log,
- * so migrating just seeds an empty one. Exported for unit testing.
+ * missing fields with defaults, then applies each step. v1 had no attempt log
+ * and v2 no module progress, so both migrations just seed an empty container —
+ * no existing data is rewritten, which is why an old exam record still reads
+ * correctly. Exported for unit testing.
  */
 export function migrate(parsed: Omit<Partial<AppState>, 'version'> & { version?: number }): AppState {
   const merged = { ...defaultState(), ...parsed } as AppState;
   const from = typeof parsed.version === 'number' ? parsed.version : 1;
   if (from < 2 && !Array.isArray(parsed.attempts)) {
     merged.attempts = [];
+  }
+  if (from < 3 && (typeof parsed.modules !== 'object' || parsed.modules === null)) {
+    merged.modules = {};
   }
   merged.version = STATE_VERSION;
   return merged;

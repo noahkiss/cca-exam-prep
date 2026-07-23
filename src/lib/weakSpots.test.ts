@@ -23,8 +23,9 @@ const NOW = 1_700_000_000_000;
 
 function baseState(): AppState {
   return {
-    version: 2,
+    version: STATE_VERSION,
     questionStats: {},
+    modules: {},
     missed: [],
     srs: {},
     exams: [],
@@ -134,5 +135,22 @@ describe('storage migration', () => {
     const attempts = [{ id: 'x', ts: 1, correct: true, usedHint: false, mode: 'exam' as const }];
     const migrated = migrate({ version: 2, attempts });
     expect(migrated.attempts).toEqual(attempts);
+  });
+
+  it('upgrades a v2 blob to v3 with empty module progress, preserving history', () => {
+    const attempts = [{ id: 'x', ts: 1, correct: true, usedHint: false, mode: 'study' as const }];
+    const migrated = migrate({ version: 2, attempts, missed: ['x'] });
+    expect(migrated.version).toBe(STATE_VERSION);
+    expect(migrated.modules).toEqual({});
+    expect(migrated.attempts).toEqual(attempts);
+    expect(migrated.missed).toEqual(['x']);
+  });
+
+  it('leaves existing module progress intact', () => {
+    const modules = {
+      m1: { id: 'm1', startedAt: 1, lastStepId: 's2', steps: {} },
+    };
+    const migrated = migrate({ version: 3, modules });
+    expect(migrated.modules).toEqual(modules);
   });
 });
